@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
+include_directories(headers)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
@@ -18,14 +19,19 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 set(PROJECT_SOURCES
         main.cpp
         src/mainwindow.cpp
+        src/detailsdialog.cpp
+        resources/resources.qrc
 )
 
 set(PROJECT_HEADERS
         headers/mainwindow.hpp
+        headers/detailsdialog.hpp
+
 )
 
 set(PROJECT_FORMS
         ui/mainwindow.ui
+        ui/detailsdialog.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -34,7 +40,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         ${PROJECT_HEADERS}
         ${PROJECT_FORMS}
-        ui/mainwindow.ui
     )
 else()
     if(ANDROID)
