@@ -10,6 +10,7 @@ DetailsDialog::DetailsDialog(QWidget *parent) : QDialog(parent), ui(new Ui::Deta
     urlLineEdit = ui->urlLineEdit;
     statusLineEdit = ui->statusLineEdit;
     detailsTextEdit = ui->detailsTextEdit;
+    detailsSubmitButton = ui->detailsSubmitButton;
 }
 
 DetailsDialog::~DetailsDialog() {

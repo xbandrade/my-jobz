@@ -14,10 +14,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     menu->addAction(quitAction);
     trayIcon->setContextMenu(menu);
     trayIcon->hide();
-
     ui->setupUi(this);
     setWindowState(windowState() | Qt::WindowMaximized);
-
     QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->centralwidget->layout());
     if (layout) {
         layout->setAlignment(Qt::AlignCenter);
@@ -27,44 +25,52 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     // MOCK TABLE DATA
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
-        model = new QStandardItemModel(4, 3, this);
-        model->setHorizontalHeaderLabels({"Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"});
-        model->setItem(0, 0, new QStandardItem("Software Developer"));
-        model->setItem(0, 1, new QStandardItem("BIM"));
-        model->setItem(0, 2, new QStandardItem("Applied"));
-        model->setItem(0, 3, new QStandardItem("28/04/2024"));
-        model->setItem(0, 4, new QStandardItem("https://bim.com.br"));
-        model->setItem(0, 5, new QStandardItem("Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros. Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis. Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue."));
-
-        model->setItem(1, 0, new QStandardItem("Python Developer"));
-        model->setItem(1, 1, new QStandardItem("BAM"));
-        model->setItem(1, 2, new QStandardItem("Finished"));
-        model->setItem(1, 3, new QStandardItem("25/04/2024"));
-        model->setItem(1, 4, new QStandardItem("https://bam.com.br"));
-        model->setItem(1, 5, new QStandardItem("Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed."));
-
-        model->setItem(2, 0, new QStandardItem("Data Analyst"));
-        model->setItem(2, 1, new QStandardItem("BEM"));
-        model->setItem(2, 2, new QStandardItem("Technical Tests"));
-        model->setItem(2, 3, new QStandardItem("13/04/2024"));
-        model->setItem(2, 4, new QStandardItem("bem@bem.br"));
-        model->setItem(2, 5, new QStandardItem("-"));
-
-        model->setItem(3, 0, new QStandardItem("C++ Developer"));
-        model->setItem(3, 1, new QStandardItem("BOM"));
-        model->setItem(3, 2, new QStandardItem("HR Interview (30/04)"));
-        model->setItem(3, 3, new QStandardItem("27/04/2024"));
-        model->setItem(3, 4, new QStandardItem("https://bom.com.br"));
-        model->setItem(3, 5, new QStandardItem("Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
-
-        tableView->horizontalHeader()->setStyleSheet(
-            "QHeaderView::section { "
-            "background-color: rgb(115, 161, 199);"
-            "font-family: Nunito;"
-            "font-size: 16px;"
-            "}"
-        );
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+        db.setDatabaseName("database.db");
+        if (!db.open()) {
+            QFile file("database.db");
+            if (!file.open(QIODevice::ReadWrite)) {
+                qDebug() << "Error: could not create database";
+                return;
+            }
+            qDebug() << "Database created successfully.";
+            file.close();
+            db.close();
+        }
+        QSqlQuery query(db);
+        if (!query.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'")) {
+            qDebug() << "Error checking table:" << query.lastError().text();
+            return;
+        }
+        if (!query.next()) {
+            qDebug() << "Table 'jobs' does not exist, creating...";
+            if (!query.exec("CREATE TABLE jobs ("
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                            "job_title TEXT,"
+                            "company TEXT,"
+                            "status TEXT,"
+                            "application_date TEXT,"
+                            "url_email TEXT,"
+                            "details TEXT"
+                            ");")) {
+                qDebug() << "Error creating table:" << query.lastError().text();
+                return;
+            }
+            qDebug() << "Table 'jobs' created successfully!";
+        }
+        addMockData(db);
+        QSqlTableModel *model = new QSqlTableModel(this, db);
+        QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
+        model->setTable("jobs");
+        model->select();
         tableView->setModel(model);
+        for (int n = 0; n < headers.length(); ++n) {
+            model->setHeaderData(n, Qt::Horizontal, headers[n]);
+        }
+        tableView->horizontalHeader()->setStyleSheet(
+            "QHeaderView::section { background-color: rgb(115, 161, 199);"
+            "font-family: Nunito; font-size: 16px; }"
+        );
         tableView->verticalHeader()->setVisible(false);
         tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -72,13 +78,67 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         tableView->setStyleSheet(
             "QTableView { background-color: rgb(187, 209, 227); }"
             "QTableView::item:selected { background-color: rgb(102, 153, 153); }"
-         );
+        );
         tableView->setSortingEnabled(true);
         tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
+        tableView->model()->sort(0, Qt::AscendingOrder);
         connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
         connect(ui->trayButton, &QPushButton::clicked, this, &MainWindow::onTrayButtonClicked);
+        connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
         connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onSystemTrayIconActivated);
+    }
+}
+
+bool databaseExists(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file) {
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+void MainWindow::addMockData(QSqlDatabase db) {
+    QSqlQuery countQuery(db);
+    if (!countQuery.exec("SELECT COUNT(*) FROM jobs")) {
+        qDebug() << "Error checking table emptiness:" << countQuery.lastError().text();
+        return;
+    }
+    countQuery.next();
+    int rowCount = countQuery.value(0).toInt();
+    if (rowCount == 0) {
+        qDebug() << "Adding mock data...";
+        QSqlQuery insertQuery(db);
+        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                              "VALUES ('Software Developer', 'BIM', 'Applied', '28/04/2024', 'https://bim.com.br', "
+                              "'Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros."
+                              " Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus "
+                              "dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis."
+                              " Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc"
+                              " in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus "
+                              "imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue.')")) {
+            qDebug() << insertQuery.lastError().text();
+            return;
+        }
+        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                              "VALUES ('Python Developer', 'BAM', 'Finished', '25/04/2024', 'https://bam.com.br', "
+                              "'Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed.')")) {
+            qDebug() << insertQuery.lastError().text();
+            return;
+        }
+        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                              "VALUES ('Data Analyst', 'BEM', 'Technical Test', '13/04/2024', 'em@bem.br', "
+                              "'-')")) {
+            qDebug() << insertQuery.lastError().text();
+            return;
+        }
+        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                              "VALUES ('C++ Developer', 'BOM', 'HR Interview (30/04)', '27/04/2024', 'https://bom.com.br', "
+                              "'Lorem ipsum dolor sit amet, consectetur adipiscing elit.')")) {
+            qDebug() << insertQuery.lastError().text();
+            return;
+        }
+        qDebug() << "Mock data added successfully!";
     }
 }
 
@@ -90,7 +150,7 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
     QString appDate = model->item(index.row(), 3)->text();
     QString url = model->item(index.row(), 4)->text();
     QString details = model->item(index.row(), 5)->text();
-    detailsDialog->idLineEdit->setText(QString::number(index.row() + 1));
+    detailsDialog->idLineEdit->setText(QString::number(index.row()));
     detailsDialog->titleLineEdit->setText(title);
     detailsDialog->companyLineEdit->setText(company);
     detailsDialog->statusLineEdit->setText(status);
@@ -123,8 +183,35 @@ void MainWindow::handleWindowStateChange(QEvent *event) {
 }
 
 void MainWindow::onTrayButtonClicked() {
+
+    qDebug() << "onTrayButtonClicked!";
     hide();
     trayIcon->show();
+}
+
+void MainWindow::onDetailsSubmitButtonClicked() {
+    bool ok;
+    int id = detailsDialog->idLineEdit->text().toInt(&ok);
+    if (!ok) {
+        QMessageBox::critical(detailsDialog, "Error", "Invalid ID");
+        detailsDialog->close();
+        return;
+    }
+    QString title = detailsDialog->titleLineEdit->text();
+    QString company = detailsDialog->companyLineEdit->text();
+    QString status = detailsDialog->statusLineEdit->text();
+    QString appDate = detailsDialog->appDateLineEdit->text();
+    QString url = detailsDialog->urlLineEdit->text();
+    QString details = detailsDialog->detailsTextEdit->toPlainText();
+    model->setItem(id, 0, new QStandardItem(title));
+    model->setItem(id, 1, new QStandardItem(company));
+    model->setItem(id, 2, new QStandardItem(status));
+    model->setItem(id, 3, new QStandardItem(appDate));
+    model->setItem(id, 4, new QStandardItem(url));
+    model->setItem(id, 5, new QStandardItem(details));
+    if (detailsDialog) {
+        detailsDialog->close();
+    }
 }
 
 MainWindow::~MainWindow() {

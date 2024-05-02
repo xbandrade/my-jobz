@@ -297,7 +297,7 @@ QPushButton {
       </widget>
      </item>
      <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="detailsSubmitButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
          <horstretch>0</horstretch>
@@ -309,6 +309,23 @@ QPushButton {
          <family>Nunito</family>
          <pointsize>12</pointsize>
         </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">
+QPushButton {
+	background-color: #90CAF9 ;
+	border-radius: 10px;
+ 	padding: 5px 10px; 
+	border: 1px solid #74A2C9;
+}
+
+QPushButton:hover {
+    background-color: #64B5F6; 
+}
+
+QPushButton:pressed {
+    background-color: #42A5F5; 
+}</string>
        </property>
        <property name="text">
         <string>Submit</string>

@@ -8,12 +8,19 @@
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QAction>
+#include <QMessageBox>
+#include <stdexcept>
+#include <QSqlError>
+#include <QSqlDatabase>
+#include <QSqlTableModel>
+#include <QSqlQuery>
+#include <QFile>
 #include "detailsdialog.hpp"
 
 QT_BEGIN_NAMESPACE
-    namespace Ui {
-        class mainWindow;
-    }
+namespace Ui {
+    class mainWindow;
+}
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow {
@@ -27,8 +34,9 @@ private slots:
     void onTableCellDoubleClicked(const QModelIndex &index);
     void restoreApp();
     void handleWindowStateChange(QEvent *event);
-    void onTrayButtonClicked();
     void onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
+    void onTrayButtonClicked();
+    void onDetailsSubmitButtonClicked();
 
 private:
     QStandardItemModel *model;
@@ -36,6 +44,7 @@ private:
     QTableView *tableView;
     DetailsDialog *detailsDialog;
     QSystemTrayIcon *trayIcon;
+    void addMockData(QSqlDatabase db);
 };
 
 #endif // MAINWINDOW_HPP

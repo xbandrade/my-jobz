@@ -277,7 +277,7 @@ QPushButton:pressed {
            <string notr="true"/>
           </property>
           <property name="text">
-           <string>Add New Row</string>
+           <string>Add New Item</string>
           </property>
          </widget>
         </item>
@@ -293,7 +293,7 @@ QPushButton:pressed {
            <string notr="true"/>
           </property>
           <property name="text">
-           <string>Duplicate Row</string>
+           <string>Duplicate Item</string>
           </property>
          </widget>
         </item>
@@ -306,7 +306,7 @@ QPushButton:pressed {
            </font>
           </property>
           <property name="text">
-           <string>Delete Row</string>
+           <string>Delete Item</string>
           </property>
          </widget>
         </item>
@@ -382,8 +382,24 @@ QPushButton:pressed {
     <addaction name="actionAbout"/>
     <addaction name="actionGithub"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <widget class="QMenu" name="menuLanguage">
+     <property name="title">
+      <string>Language</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="separator"/>
+     <addaction name="actionEnglish"/>
+     <addaction name="actionPortuguese"/>
+    </widget>
+    <addaction name="menuLanguage"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
+   <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionAbout">
@@ -414,6 +430,16 @@ QPushButton:pressed {
   <action name="actionExport_to_Spreadsheet">
    <property name="text">
     <string>Export to Spreadsheet</string>
+   </property>
+  </action>
+  <action name="actionEnglish">
+   <property name="text">
+    <string>English</string>
+   </property>
+  </action>
+  <action name="actionPortuguese">
+   <property name="text">
+    <string>Portuguese</string>
    </property>
   </action>
  </widget>

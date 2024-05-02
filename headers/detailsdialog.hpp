@@ -23,6 +23,7 @@ public:
     QLineEdit *urlLineEdit;
     QLineEdit *statusLineEdit;
     QTextEdit *detailsTextEdit;
+    QPushButton *detailsSubmitButton;
     ~DetailsDialog();
 
 private:
