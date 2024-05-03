@@ -50,7 +50,9 @@ private slots:
     void onDuplicateButtonClicked();
     void onDeleteButtonClicked();
     void onSearchButtonClicked();
+    void onClipboardCheckBoxClicked();
     void onClipboardDataChanged();
+    void onTrayMessageClicked();
 
 private:
     Ui::mainWindow *ui;
@@ -60,6 +62,8 @@ private:
     DetailsDialog *detailsDialog;
     QSystemTrayIcon *trayIcon;
     DateSortProxyModel *sortProxyModel;
+    QString previousClipboard;
+    bool showClipboardHint;
     void addMockData(QSqlDatabase db);
 };
 

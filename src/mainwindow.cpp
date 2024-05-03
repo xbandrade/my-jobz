@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWindow) {
+    showClipboardHint = true;
     trayIcon = new QSystemTrayIcon(this);
     QIcon icon(":/application.png");
     trayIcon->setIcon(icon);
@@ -86,11 +87,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
         connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchButtonClicked);
         connect(ui->searchLineEdit, &QLineEdit::returnPressed, ui->searchButton, &QPushButton::click);
+        connect(ui->clipboardCheckBox, &QCheckBox::clicked, this, &MainWindow::onClipboardCheckBoxClicked);
         connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
         connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onSystemTrayIconActivated);
         connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
         connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
         connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
+        connect(trayIcon, &QSystemTrayIcon::messageClicked, this, &MainWindow::onTrayMessageClicked);
     }
 }
 
@@ -157,7 +160,7 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
     detailsDialog->exec();
 }
 
-void MainWindow::onAddNewItemButtonClicked() {
+void clearDialogFields(DetailsDialog *detailsDialog) {
     detailsDialog->idLineEdit->setText("");
     detailsDialog->titleLineEdit->setText("");
     detailsDialog->companyLineEdit->setText("");
@@ -165,6 +168,11 @@ void MainWindow::onAddNewItemButtonClicked() {
     detailsDialog->appDateLineEdit->setText("");
     detailsDialog->urlLineEdit->setText("");
     detailsDialog->detailsTextEdit->clear();
+}
+
+
+void MainWindow::onAddNewItemButtonClicked() {
+    clearDialogFields(detailsDialog);
     detailsDialog->idLineEdit->hide();
     detailsDialog->idLabel->hide();
     detailsDialog->titleLineEdit->setFocus();
@@ -234,21 +242,17 @@ void MainWindow::onSearchButtonClicked() {
     model->setFilter(filter);
 }
 
-void MainWindow::onTrayButtonClicked() {
-    hide();
-}
-
 void MainWindow::onDetailsSubmitButtonClicked() {
     QString idText = detailsDialog->idLineEdit->text();
     int id = idText.isEmpty() ? -1 : idText.toInt();
     bool isNewEntry = id < 0;
     QSqlQuery query(db);
     query.prepare(isNewEntry ?
-                      "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                      "VALUES (:title, :company, :status, :appDate, :url, :details)" :
-                      "UPDATE jobs SET job_title = :title, company = :company, status = :status, "
-                      "application_date = :appDate, url_email = :url, details = :details "
-                      "WHERE id = :id");
+                  "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                  "VALUES (:title, :company, :status, :appDate, :url, :details)" :
+                  "UPDATE jobs SET job_title = :title, company = :company, status = :status, "
+                  "application_date = :appDate, url_email = :url, details = :details "
+                  "WHERE id = :id");
     query.bindValue(":title", detailsDialog->titleLineEdit->text());
     query.bindValue(":company", detailsDialog->companyLineEdit->text());
     query.bindValue(":status", detailsDialog->statusLineEdit->text());
@@ -265,23 +269,59 @@ void MainWindow::onDetailsSubmitButtonClicked() {
     }
     model->select();
     QMessageBox::information(detailsDialog, "Success",
-                             QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
+        QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
     detailsDialog->close();
 }
 
-void MainWindow::onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
-{
+void MainWindow::onClipboardCheckBoxClicked() {
+    if (showClipboardHint && ui->clipboardCheckBox->isChecked()) {
+        showClipboardHint = false;
+        QMessageBox::information(detailsDialog, "Info",
+                                 "This option allows the application to listen for changes on your clipboard\n"
+                                 "When a URL or email is detected, click on the notification to add a new appointment");
+    }
+}
+
+void MainWindow::onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
     if (reason == QSystemTrayIcon::DoubleClick) {
         restoreWindow();
     }
 }
 
 void MainWindow::onClipboardDataChanged() {
-    return;
+    QString clipboardText = QApplication::clipboard()->text();
+    if (!ui->clipboardCheckBox->isChecked() || clipboardText == previousClipboard) {
+        return;
+    }
+    previousClipboard = clipboardText;
+    static QRegularExpression emailRegex(R"(\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b)");
+    static QRegularExpression urlRegex(R"(https?://\S+)");
+    if (emailRegex.match(clipboardText).hasMatch() || urlRegex.match(clipboardText).hasMatch()) {
+        trayIcon->showMessage("Clipboard Content", "URL or Email detected!\nClick here to add a new appointment",
+            QSystemTrayIcon::Information, 3000);
+    }
+}
+
+void MainWindow::onTrayMessageClicked() {
+    restoreWindow();
+    activateWindow();
+    raise();
+    QString clipboardText = QApplication::clipboard()->text();
+    clearDialogFields(detailsDialog);
+    detailsDialog->urlLineEdit->setText(clipboardText);
+    // ... If domain is known, fill in other fields
+    detailsDialog->idLineEdit->hide();
+    detailsDialog->idLabel->hide();
+    detailsDialog->titleLineEdit->setFocus();
+    detailsDialog->exec();
 }
 
 void MainWindow::restoreWindow() {
     show();
+}
+
+void MainWindow::onTrayButtonClicked() {
+    hide();
 }
 
 MainWindow::~MainWindow() {

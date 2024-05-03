@@ -249,9 +249,9 @@ QCheckBox {
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="clipboardMonitorCheckBox">
+         <widget class="QCheckBox" name="clipboardCheckBox">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="font">
            <font>
@@ -415,6 +415,9 @@ QWidget {
      <string>Settings</string>
     </property>
     <widget class="QMenu" name="menuLanguage">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>Language</string>
      </property>
@@ -424,6 +427,7 @@ QWidget {
      <addaction name="actionPortuguese"/>
     </widget>
     <addaction name="menuLanguage"/>
+    <addaction name="actionSet_default_status"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -436,26 +440,41 @@ QWidget {
    </property>
   </action>
   <action name="actionEnable_Dark_Mode">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Enable Dark Mode</string>
    </property>
   </action>
   <action name="actionImport_from_Database">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Import from Database</string>
    </property>
   </action>
   <action name="actionExport_to_Database">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Export to Database</string>
    </property>
   </action>
   <action name="actionGithub">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Github</string>
    </property>
   </action>
   <action name="actionExport_to_Spreadsheet">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Export to Spreadsheet</string>
    </property>
@@ -468,6 +487,14 @@ QWidget {
   <action name="actionPortuguese">
    <property name="text">
     <string>Portuguese</string>
+   </property>
+  </action>
+  <action name="actionSet_default_status">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Set default status</string>
    </property>
   </action>
  </widget>
