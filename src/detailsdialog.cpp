@@ -3,6 +3,7 @@
 
 DetailsDialog::DetailsDialog(QWidget *parent) : QDialog(parent), ui(new Ui::DetailsDialog) {
     ui->setupUi(this);
+    idLabel = ui->idLabel;
     idLineEdit = ui->idLineEdit;
     titleLineEdit = ui->titleLineEdit;
     companyLineEdit = ui->companyLineEdit;

@@ -7,13 +7,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     trayIcon->setIcon(icon);
     QMenu *menu = new QMenu(this);
     QAction *restoreAction = new QAction("Restore", this);
-    connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreApp);
     menu->addAction(restoreAction);
     QAction *quitAction = new QAction("Quit", this);
-    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
     menu->addAction(quitAction);
     trayIcon->setContextMenu(menu);
-    trayIcon->hide();
+    trayIcon->show();
     ui->setupUi(this);
     setWindowState(windowState() | Qt::WindowMaximized);
     QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->centralwidget->layout());
@@ -21,11 +19,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         layout->setAlignment(Qt::AlignCenter);
     }
     detailsDialog = new DetailsDialog(this);
-
-    // MOCK TABLE DATA
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
-        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+        db = QSqlDatabase::addDatabase("QSQLITE");  // TODO: Separate into different files
         db.setDatabaseName("database.db");
         if (!db.open()) {
             QFile file("database.db");
@@ -58,44 +54,44 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
             }
             qDebug() << "Table 'jobs' created successfully!";
         }
-        addMockData(db);
-        QSqlTableModel *model = new QSqlTableModel(this, db);
+        addMockData(db); // Test Only - Add mock entries if database is empty
+        model = new QSqlTableModel(this, db);
         QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
         model->setTable("jobs");
         model->select();
-        tableView->setModel(model);
+        sortProxyModel = new DateSortProxyModel(this);
+        sortProxyModel->setSourceModel(model);
+        tableView->setModel(sortProxyModel);
         for (int n = 0; n < headers.length(); ++n) {
             model->setHeaderData(n, Qt::Horizontal, headers[n]);
         }
         tableView->horizontalHeader()->setStyleSheet(
-            "QHeaderView::section { background-color: rgb(115, 161, 199);"
-            "font-family: Nunito; font-size: 16px; }"
+            "QHeaderView::section { background-color: #495057;"
+            "font-family: Nunito; font-size: 16px; color: #CED4DA; }"
         );
+        tableView->resizeColumnToContents(0);
         tableView->verticalHeader()->setVisible(false);
         tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
         tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
-        tableView->setStyleSheet(
-            "QTableView { background-color: rgb(187, 209, 227); }"
-            "QTableView::item:selected { background-color: rgb(102, 153, 153); }"
-        );
         tableView->setSortingEnabled(true);
         tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        tableView->model()->sort(0, Qt::AscendingOrder);
+        tableView->model()->sort(0, Qt::DescendingOrder);
+        // Signal/Slot connections
         connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
         connect(ui->trayButton, &QPushButton::clicked, this, &MainWindow::onTrayButtonClicked);
+        connect(ui->addNewItemButton, &QPushButton::clicked, this, &MainWindow::onAddNewItemButtonClicked);
+        connect(ui->duplicateButton, &QPushButton::clicked, this, &MainWindow::onDuplicateButtonClicked);
+        connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
+        connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchButtonClicked);
+        connect(ui->searchLineEdit, &QLineEdit::returnPressed, ui->searchButton, &QPushButton::click);
         connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
         connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onSystemTrayIconActivated);
+        connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
+        connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+        connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
     }
-}
-
-bool databaseExists(const char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (file) {
-        fclose(file);
-        return true;
-    }
-    return false;
 }
 
 void MainWindow::addMockData(QSqlDatabase db) {
@@ -106,37 +102,31 @@ void MainWindow::addMockData(QSqlDatabase db) {
     }
     countQuery.next();
     int rowCount = countQuery.value(0).toInt();
+    QList<QString> queries;
+    queries << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+               "VALUES ('Software Developer', 'BIM', 'Applied', '28/04/2024', 'https://bim.com.br', "
+               "'Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros."
+               " Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus "
+               "dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis."
+               " Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc"
+               " in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus "
+               "imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue.')"
+            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+               "VALUES ('Python Developer', 'BAM', 'Finished', '25/04/2024', 'https://bam.com.br', "
+               "'Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed.')"
+            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+               "VALUES ('Data Analyst', 'BEM', 'Technical Test', '13/04/2024', 'em@bem.br', "
+               "'-')"
+            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+               "VALUES ('C++ Developer', 'BOM', 'HR Interview (30/04)', '27/04/2024', 'https://bom.com.br', "
+               "'Lorem ipsum dolor sit amet, consectetur adipiscing elit.')";
     if (rowCount == 0) {
-        qDebug() << "Adding mock data...";
         QSqlQuery insertQuery(db);
-        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                              "VALUES ('Software Developer', 'BIM', 'Applied', '28/04/2024', 'https://bim.com.br', "
-                              "'Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros."
-                              " Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus "
-                              "dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis."
-                              " Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc"
-                              " in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus "
-                              "imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue.')")) {
-            qDebug() << insertQuery.lastError().text();
-            return;
-        }
-        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                              "VALUES ('Python Developer', 'BAM', 'Finished', '25/04/2024', 'https://bam.com.br', "
-                              "'Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed.')")) {
-            qDebug() << insertQuery.lastError().text();
-            return;
-        }
-        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                              "VALUES ('Data Analyst', 'BEM', 'Technical Test', '13/04/2024', 'em@bem.br', "
-                              "'-')")) {
-            qDebug() << insertQuery.lastError().text();
-            return;
-        }
-        if (!insertQuery.exec("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                              "VALUES ('C++ Developer', 'BOM', 'HR Interview (30/04)', '27/04/2024', 'https://bom.com.br', "
-                              "'Lorem ipsum dolor sit amet, consectetur adipiscing elit.')")) {
-            qDebug() << insertQuery.lastError().text();
-            return;
+        for (const auto& query : queries) {
+            if (!insertQuery.exec(query)) {
+                qDebug() << insertQuery.lastError().text();
+                return;
+            }
         }
         qDebug() << "Mock data added successfully!";
     }
@@ -144,74 +134,154 @@ void MainWindow::addMockData(QSqlDatabase db) {
 
 void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
 {
-    QString title = model->item(index.row(), 0)->text();
-    QString company = model->item(index.row(), 1)->text();
-    QString status = model->item(index.row(), 2)->text();
-    QString appDate = model->item(index.row(), 3)->text();
-    QString url = model->item(index.row(), 4)->text();
-    QString details = model->item(index.row(), 5)->text();
-    detailsDialog->idLineEdit->setText(QString::number(index.row()));
+    QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+    QModelIndex idIndex = model->index(sourceIndex.row(), 0);
+    int id = model->data(idIndex).toInt();
+    QSqlRecord record = model->record(sourceIndex.row());
+    QString title = record.value("job_title").toString();
+    QString company = record.value("company").toString();
+    QString status = record.value("status").toString();
+    QString appDate = record.value("application_date").toString();
+    QString url = record.value("url_email").toString();
+    QString details = record.value("details").toString();
+    detailsDialog->idLineEdit->setText(QString::number(id));
     detailsDialog->titleLineEdit->setText(title);
     detailsDialog->companyLineEdit->setText(company);
     detailsDialog->statusLineEdit->setText(status);
     detailsDialog->appDateLineEdit->setText(appDate);
     detailsDialog->urlLineEdit->setText(url);
     detailsDialog->detailsTextEdit->setText(details);
+    detailsDialog->idLineEdit->show();
+    detailsDialog->idLabel->show();
+    detailsDialog->titleLineEdit->setFocus();
     detailsDialog->exec();
+}
+
+void MainWindow::onAddNewItemButtonClicked() {
+    detailsDialog->idLineEdit->setText("");
+    detailsDialog->titleLineEdit->setText("");
+    detailsDialog->companyLineEdit->setText("");
+    detailsDialog->statusLineEdit->setText("");
+    detailsDialog->appDateLineEdit->setText("");
+    detailsDialog->urlLineEdit->setText("");
+    detailsDialog->detailsTextEdit->clear();
+    detailsDialog->idLineEdit->hide();
+    detailsDialog->idLabel->hide();
+    detailsDialog->titleLineEdit->setFocus();
+    detailsDialog->exec();
+}
+
+void MainWindow::onDeleteButtonClicked() {
+    QModelIndex selectedIndex = tableView->selectionModel()->currentIndex();
+    if (!selectedIndex.isValid()) {
+        QMessageBox::warning(this, "Warning", "Please select any cell of an item before deleting.");
+        return;
+    }
+    QMessageBox::StandardButton confirmDelete = QMessageBox::question(
+        this, "Confirmation", "Are you sure you want to delete this appointment?",
+        QMessageBox::Yes | QMessageBox::No
+    );
+    if (confirmDelete != QMessageBox::Yes) {
+        return;
+    }
+    QModelIndex sourceIndex = sortProxyModel->mapToSource(selectedIndex);
+    int id = model->data(model->index(sourceIndex.row(), 0)).toInt();
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM jobs WHERE id = :id");
+    query.bindValue(":id", id);
+    if (!query.exec()) {
+        qDebug() << "Error:" << query.lastError().text();
+        return;
+    }
+    model->select();
+    QMessageBox::information(this, "Success", "The appointment has been deleted successfully.");
+}
+
+void MainWindow::onDuplicateButtonClicked() {
+    QModelIndex selectedIndex = tableView->selectionModel()->currentIndex();
+    if (!selectedIndex.isValid()) {
+        QMessageBox::warning(this, "Warning", "Please select any cell of an item before duplicating.");
+        return;
+    }
+    QModelIndex sourceIndex = sortProxyModel->mapToSource(selectedIndex);
+    QSqlRecord record = model->record(sourceIndex.row());
+    QSqlQuery query(db);
+    query.prepare("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                  "VALUES (:job_title, :company, :status, :application_date, :url_email, :details)");
+    query.bindValue(":job_title", record.value("job_title"));
+    query.bindValue(":company", record.value("company"));
+    query.bindValue(":status", record.value("status"));
+    query.bindValue(":application_date", record.value("application_date"));
+    query.bindValue(":url_email", record.value("url_email"));
+    query.bindValue(":details", record.value("details"));
+    if (!query.exec()) {
+        qDebug() << "Error: " << query.lastError().text();
+        return;
+    }
+    model->select();
+    QMessageBox::information(this, "Success", "The appointment has been duplicated successfully.");
+}
+
+void MainWindow::onSearchButtonClicked() {
+    QString searchText = ui->searchLineEdit->text();
+    if (searchText.isEmpty()) {
+        model->setFilter("");
+        return;
+    }
+    QString filter = QString("job_title LIKE '%%1%' OR company LIKE '%%1%' "
+                             "OR status LIKE '%%1%' OR application_date LIKE '%%1%' "
+                             "OR url_email LIKE '%%1%' OR details LIKE '%%1%'").arg(searchText);
+    model->setFilter(filter);
+}
+
+void MainWindow::onTrayButtonClicked() {
+    hide();
+}
+
+void MainWindow::onDetailsSubmitButtonClicked() {
+    QString idText = detailsDialog->idLineEdit->text();
+    int id = idText.isEmpty() ? -1 : idText.toInt();
+    bool isNewEntry = id < 0;
+    QSqlQuery query(db);
+    query.prepare(isNewEntry ?
+                      "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                      "VALUES (:title, :company, :status, :appDate, :url, :details)" :
+                      "UPDATE jobs SET job_title = :title, company = :company, status = :status, "
+                      "application_date = :appDate, url_email = :url, details = :details "
+                      "WHERE id = :id");
+    query.bindValue(":title", detailsDialog->titleLineEdit->text());
+    query.bindValue(":company", detailsDialog->companyLineEdit->text());
+    query.bindValue(":status", detailsDialog->statusLineEdit->text());
+    query.bindValue(":appDate", detailsDialog->appDateLineEdit->text());
+    query.bindValue(":url", detailsDialog->urlLineEdit->text());
+    query.bindValue(":details", detailsDialog->detailsTextEdit->toPlainText());
+    if (!isNewEntry) {
+        query.bindValue(":id", id);
+    }
+    if (!query.exec()) {
+        QMessageBox::critical(detailsDialog, "Error", "Failed to update appointment");
+        detailsDialog->close();
+        return;
+    }
+    model->select();
+    QMessageBox::information(detailsDialog, "Success",
+                             QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
+    detailsDialog->close();
 }
 
 void MainWindow::onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
 {
     if (reason == QSystemTrayIcon::DoubleClick) {
-        restoreApp();
+        restoreWindow();
     }
 }
 
-void MainWindow::restoreApp() {
+void MainWindow::onClipboardDataChanged() {
+    return;
+}
+
+void MainWindow::restoreWindow() {
     show();
-    trayIcon->hide();
-}
-
-void MainWindow::handleWindowStateChange(QEvent *event) {
-    if (event->type() == QEvent::WindowStateChange) {
-        QWindowStateChangeEvent *stateChangeEvent = static_cast<QWindowStateChangeEvent*>(event);
-        if (stateChangeEvent->oldState() & Qt::WindowMinimized) {
-            hide();
-            trayIcon->show();
-        }
-    }
-}
-
-void MainWindow::onTrayButtonClicked() {
-
-    qDebug() << "onTrayButtonClicked!";
-    hide();
-    trayIcon->show();
-}
-
-void MainWindow::onDetailsSubmitButtonClicked() {
-    bool ok;
-    int id = detailsDialog->idLineEdit->text().toInt(&ok);
-    if (!ok) {
-        QMessageBox::critical(detailsDialog, "Error", "Invalid ID");
-        detailsDialog->close();
-        return;
-    }
-    QString title = detailsDialog->titleLineEdit->text();
-    QString company = detailsDialog->companyLineEdit->text();
-    QString status = detailsDialog->statusLineEdit->text();
-    QString appDate = detailsDialog->appDateLineEdit->text();
-    QString url = detailsDialog->urlLineEdit->text();
-    QString details = detailsDialog->detailsTextEdit->toPlainText();
-    model->setItem(id, 0, new QStandardItem(title));
-    model->setItem(id, 1, new QStandardItem(company));
-    model->setItem(id, 2, new QStandardItem(status));
-    model->setItem(id, 3, new QStandardItem(appDate));
-    model->setItem(id, 4, new QStandardItem(url));
-    model->setItem(id, 5, new QStandardItem(details));
-    if (detailsDialog) {
-        detailsDialog->close();
-    }
 }
 
 MainWindow::~MainWindow() {

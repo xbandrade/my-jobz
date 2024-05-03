@@ -22,13 +22,14 @@ set(PROJECT_SOURCES
         main.cpp
         src/mainwindow.cpp
         src/detailsdialog.cpp
+        src/proxymodel.cpp
         resources/resources.qrc
 )
 
 set(PROJECT_HEADERS
         headers/mainwindow.hpp
         headers/detailsdialog.hpp
-
+        headers/proxymodel.hpp
 )
 
 set(PROJECT_FORMS

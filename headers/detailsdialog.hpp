@@ -2,6 +2,7 @@
 #define DETAILSDIALOG_HPP
 
 #include <QDialog>
+#include <QLabel>
 #include <QLineEdit>
 #include <QTextEdit>
 
@@ -16,6 +17,7 @@ class DetailsDialog : public QDialog {
 
 public:
     explicit DetailsDialog(QWidget *parent = nullptr);
+    QLabel *idLabel;
     QLineEdit *idLineEdit;
     QLineEdit *titleLineEdit;
     QLineEdit *companyLineEdit;

@@ -17,16 +17,12 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Details</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QLabel {
 	font-family: Nunito;
 	font-size: 14px;
-}
-
-QDialog {
-    background-color: rgb(153, 179, 204);
 }
 
 QLineEdit, QTextEdit {
@@ -38,10 +34,28 @@ QLineEdit {
 	height: 30px;
 }
 
-QPushButton {
-	background-color: #b2b2cc;
+QDialog {
+    background-color: #8d959d;
 }
 
+QPushButton {
+	background-color: #CED4DA ;
+	border-radius: 10px;
+ 	padding: 5px 10px; 
+	border: 1px solid #74A2C9;
+}
+
+QPushButton:hover {
+    background-color: #ADB5BD; 
+}
+
+QPushButton:pressed {
+    background-color: #6C757D; 
+}
+
+QCheckBox {
+	color: #CED4DA;
+}
 </string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -311,21 +325,7 @@ QPushButton {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">
-QPushButton {
-	background-color: #90CAF9 ;
-	border-radius: 10px;
- 	padding: 5px 10px; 
-	border: 1px solid #74A2C9;
-}
-
-QPushButton:hover {
-    background-color: #64B5F6; 
-}
-
-QPushButton:pressed {
-    background-color: #42A5F5; 
-}</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string>Submit</string>

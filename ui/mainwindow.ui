@@ -36,22 +36,26 @@
    </property>
    <property name="styleSheet">
     <string notr="true">QWidget {
-    background-color: rgb(153,179,204);
+    background-color: #717980;
 }
 
 QPushButton {
-	background-color: #90CAF9 ;
+	background-color: #CED4DA ;
 	border-radius: 10px;
  	padding: 5px 10px; 
 	border: 1px solid #74A2C9;
 }
 
 QPushButton:hover {
-    background-color: #64B5F6; 
+    background-color: #ADB5BD; 
 }
 
 QPushButton:pressed {
-    background-color: #42A5F5; 
+    background-color: #6C757D; 
+}
+
+QCheckBox {
+	color: #CED4DA;
 }</string>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -142,7 +146,7 @@ QPushButton:pressed {
           </property>
           <property name="styleSheet">
            <string notr="true">QLabel {
-	color: black;
+	color: #CED4DA;
 	padding-top: 10px;
 }</string>
           </property>
@@ -188,6 +192,9 @@ QPushButton:pressed {
         </property>
         <item>
          <widget class="QLineEdit" name="searchLineEdit">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="sizeIncrement">
            <size>
             <width>0</width>
@@ -211,6 +218,9 @@ QPushButton:pressed {
         </item>
         <item>
          <widget class="QPushButton" name="searchButton">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="font">
            <font>
             <family>Nunito</family>
@@ -224,6 +234,9 @@ QPushButton:pressed {
         </item>
         <item>
          <widget class="QCheckBox" name="hideFinishedCheckBox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="font">
            <font>
             <family>Nunito</family>
@@ -237,6 +250,9 @@ QPushButton:pressed {
         </item>
         <item>
          <widget class="QCheckBox" name="clipboardMonitorCheckBox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="font">
            <font>
             <family>Nunito</family>
@@ -266,7 +282,7 @@ QPushButton:pressed {
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout3">
         <item>
-         <widget class="QPushButton" name="addNewRowButton">
+         <widget class="QPushButton" name="addNewItemButton">
           <property name="font">
            <font>
             <family>Nunito</family>
@@ -337,7 +353,12 @@ QPushButton:pressed {
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true"/>
+         <string notr="true">QTableView {
+	background-color: #8d959d;
+}
+QTableView::item:selected {
+	background-color: #6C757D ;
+}</string>
         </property>
         <attribute name="horizontalHeaderCascadingSectionResizes">
          <bool>false</bool>
@@ -358,7 +379,14 @@ QPushButton:pressed {
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">QWidget { background-color: rgb(115,161,199); }</string>
+    <string notr="true">QMenuBar::item:selected {
+	background-color: #ADB5BD;
+	color: #343A40;
+}
+QWidget {
+	background-color: #495057;
+	color: #CED4DA;
+}</string>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
