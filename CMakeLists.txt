@@ -20,21 +20,23 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Sql)
 
 set(PROJECT_SOURCES
         main.cpp
-        src/mainwindow.cpp
-        src/detailsdialog.cpp
-        src/proxymodel.cpp
+        src/main_window.cpp
+        src/details_dialog.cpp
+        src/proxy_model.cpp
+        src/database_manager.cpp
         resources/resources.qrc
 )
 
 set(PROJECT_HEADERS
-        headers/mainwindow.hpp
-        headers/detailsdialog.hpp
-        headers/proxymodel.hpp
+        headers/main_window.hpp
+        headers/details_dialog.hpp
+        headers/proxy_model.hpp
+        headers/database_manager.hpp
 )
 
 set(PROJECT_FORMS
-        ui/mainwindow.ui
-        ui/detailsdialog.ui
+        ui/main_window.ui
+        ui/details_dialog.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

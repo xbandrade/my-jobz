@@ -265,15 +265,18 @@ QCheckBox {
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="trayButton">
+         <widget class="QCheckBox" name="trayCheckBox">
           <property name="font">
            <font>
             <family>Nunito</family>
-            <pointsize>12</pointsize>
+            <pointsize>15</pointsize>
            </font>
           </property>
           <property name="text">
            <string>Minimize To Tray</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -380,21 +383,48 @@ QTableView::item:selected {
    </property>
    <property name="styleSheet">
     <string notr="true">QMenuBar::item:selected {
-	background-color: #ADB5BD;
-	color: #343A40;
+    background-color: #ADB5BD;
+    color: #343A40;
 }
+
+QMenu::item:selected {
+    background-color: #ADB5BD;
+    color: #343A40;
+}
+
 QWidget {
-	background-color: #495057;
-	color: #CED4DA;
-}</string>
+    background-color: #495057;
+    color: #CED4DA;
+}
+
+QMenu::item:disabled {
+    background-color: #6c757d;
+    color: #adb5bd;
+}
+
+QMenu::item:selected:disabled {
+    background-color: #6c757d; 
+    color: #343a40;
+}
+
+QMenuBar::item:disabled {
+    background-color: #6c757d;
+    color: #adb5bd;
+}
+
+QMenuBar::item:selected:disabled {
+    background-color: #6c757d; 
+    color: #343a40;
+}
+</string>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionImport_from_Database"/>
-    <addaction name="actionExport_to_Database"/>
-    <addaction name="actionExport_to_Spreadsheet"/>
+    <addaction name="actionImportFromDB"/>
+    <addaction name="actionExportToDB"/>
+    <addaction name="actionExportToSS"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -447,17 +477,17 @@ QWidget {
     <string>Enable Dark Mode</string>
    </property>
   </action>
-  <action name="actionImport_from_Database">
+  <action name="actionImportFromDB">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Import from Database</string>
    </property>
   </action>
-  <action name="actionExport_to_Database">
+  <action name="actionExportToDB">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Export to Database</string>
@@ -471,7 +501,7 @@ QWidget {
     <string>Github</string>
    </property>
   </action>
-  <action name="actionExport_to_Spreadsheet">
+  <action name="actionExportToSS">
    <property name="enabled">
     <bool>false</bool>
    </property>

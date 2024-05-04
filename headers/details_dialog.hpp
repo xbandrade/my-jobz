@@ -1,5 +1,5 @@
-#ifndef DETAILSDIALOG_HPP
-#define DETAILSDIALOG_HPP
+#ifndef DETAILS_DIALOG_H
+#define DETAILS_DIALOG_H
 
 #include <QDialog>
 #include <QLabel>
@@ -28,8 +28,11 @@ public:
     QPushButton *detailsSubmitButton;
     ~DetailsDialog();
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event);
+
 private:
     Ui::DetailsDialog *ui;
 };
 
-#endif // DETAILSDIALOG_HPP
+#endif // DETAILS_DIALOG_H

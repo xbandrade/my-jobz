@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_HPP
-#define MAINWINDOW_HPP
+#ifndef MAIN_WINDOW_HPP
+#define MAIN_WINDOW_HPP
 
 #include <QMainWindow>
 #include <QStandardItemModel>
@@ -24,8 +24,9 @@
 #include <QPushButton>
 #include <QClipboard>
 #include <QRegularExpression>
-#include "detailsdialog.hpp"
-#include "proxymodel.hpp"
+#include "details_dialog.hpp"
+#include "proxy_model.hpp"
+#include "database_manager.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -42,8 +43,7 @@ public:
 
 private slots:
     void restoreWindow();
-    void onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
-    void onTrayButtonClicked();
+    void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
     void onTableCellDoubleClicked(const QModelIndex &index);
     void onDetailsSubmitButtonClicked();
     void onAddNewItemButtonClicked();
@@ -53,18 +53,24 @@ private slots:
     void onClipboardCheckBoxClicked();
     void onClipboardDataChanged();
     void onTrayMessageClicked();
+    void exportToDB();
+    void importFromDB();
+
+protected:
+    void changeEvent(QEvent *event);
 
 private:
     Ui::mainWindow *ui;
     QSqlDatabase db;
-    QSqlTableModel *model;
+    QSqlQueryModel *model;
     QTableView *tableView;
     DetailsDialog *detailsDialog;
     QSystemTrayIcon *trayIcon;
     DateSortProxyModel *sortProxyModel;
     QString previousClipboard;
+    DatabaseManager* dbManager;
     bool showClipboardHint;
-    void addMockData(QSqlDatabase db);
+    void clearDialogFields();
 };
 
-#endif // MAINWINDOW_HPP
+#endif // MAIN_WINDOW_HPP

@@ -1,4 +1,4 @@
-#include "../headers/proxymodel.hpp"
+#include "../headers/proxy_model.hpp"
 
 DateSortProxyModel::DateSortProxyModel(QObject *parent) : QSortFilterProxyModel(parent) {
 }
@@ -16,3 +16,16 @@ bool DateSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &ri
     return QSortFilterProxyModel::lessThan(left, right);
 }
 
+bool DateSortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
+    if (filterRegularExpression().pattern().isEmpty()) {
+        return true;
+    }
+    for (int column = 0; column < sourceModel()->columnCount(); ++column) {
+        QModelIndex index = sourceModel()->index(sourceRow, column, sourceParent);
+        QString data = sourceModel()->data(index).toString();
+        if (data.contains(filterRegularExpression())) {
+            return true;
+        }
+    }
+    return false;
+}

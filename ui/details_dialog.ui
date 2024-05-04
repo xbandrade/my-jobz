@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>Details</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../resources/resources.qrc">
+    <normaloff>:/application.png</normaloff>:/application.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">QLabel {
 	font-family: Nunito;

@@ -1,5 +1,5 @@
-#include "../headers/mainwindow.hpp"
-#include "./ui_mainwindow.h"
+#include "../headers/main_window.hpp"
+#include "./ui_main_window.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWindow) {
     showClipboardHint = true;
@@ -22,47 +22,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     detailsDialog = new DetailsDialog(this);
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
-        db = QSqlDatabase::addDatabase("QSQLITE");  // TODO: Separate into different files
-        db.setDatabaseName("database.db");
-        if (!db.open()) {
-            QFile file("database.db");
-            if (!file.open(QIODevice::ReadWrite)) {
-                qDebug() << "Error: could not create database";
-                return;
-            }
-            qDebug() << "Database created successfully.";
-            file.close();
-            db.close();
-        }
-        QSqlQuery query(db);
-        if (!query.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'")) {
-            qDebug() << "Error checking table:" << query.lastError().text();
+        dbManager = new DatabaseManager(this);
+        if (!dbManager->openDatabase("database.db")) {
+            qDebug() << "Error: could not open database";
             return;
         }
-        if (!query.next()) {
-            qDebug() << "Table 'jobs' does not exist, creating...";
-            if (!query.exec("CREATE TABLE jobs ("
-                            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                            "job_title TEXT,"
-                            "company TEXT,"
-                            "status TEXT,"
-                            "application_date TEXT,"
-                            "url_email TEXT,"
-                            "details TEXT"
-                            ");")) {
-                qDebug() << "Error creating table:" << query.lastError().text();
-                return;
-            }
-            qDebug() << "Table 'jobs' created successfully!";
+        if (!dbManager->createJobsTableIfNotExists()) {
+            qDebug() << "Error creating table";
+            return;
         }
-        addMockData(db); // Test Only - Add mock entries if database is empty
-        model = new QSqlTableModel(this, db);
-        QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
-        model->setTable("jobs");
-        model->select();
+        dbManager->addMockData();
+        model = dbManager->getModel();
+        model->setQuery("SELECT * FROM jobs");
         sortProxyModel = new DateSortProxyModel(this);
         sortProxyModel->setSourceModel(model);
         tableView->setModel(sortProxyModel);
+        QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
         for (int n = 0; n < headers.length(); ++n) {
             model->setHeaderData(n, Qt::Horizontal, headers[n]);
         }
@@ -81,7 +56,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         tableView->model()->sort(0, Qt::DescendingOrder);
         // Signal/Slot connections
         connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
-        connect(ui->trayButton, &QPushButton::clicked, this, &MainWindow::onTrayButtonClicked);
         connect(ui->addNewItemButton, &QPushButton::clicked, this, &MainWindow::onAddNewItemButtonClicked);
         connect(ui->duplicateButton, &QPushButton::clicked, this, &MainWindow::onDuplicateButtonClicked);
         connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
@@ -89,49 +63,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         connect(ui->searchLineEdit, &QLineEdit::returnPressed, ui->searchButton, &QPushButton::click);
         connect(ui->clipboardCheckBox, &QCheckBox::clicked, this, &MainWindow::onClipboardCheckBoxClicked);
         connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
-        connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onSystemTrayIconActivated);
+        connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onTrayIconActivated);
         connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
         connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
         connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
         connect(trayIcon, &QSystemTrayIcon::messageClicked, this, &MainWindow::onTrayMessageClicked);
-    }
-}
+        connect(ui->actionExportToDB, &QAction::triggered, this, &MainWindow::exportToDB);
+        connect(ui->actionImportFromDB, &QAction::triggered, this, &MainWindow::importFromDB);
 
-void MainWindow::addMockData(QSqlDatabase db) {
-    QSqlQuery countQuery(db);
-    if (!countQuery.exec("SELECT COUNT(*) FROM jobs")) {
-        qDebug() << "Error checking table emptiness:" << countQuery.lastError().text();
-        return;
-    }
-    countQuery.next();
-    int rowCount = countQuery.value(0).toInt();
-    QList<QString> queries;
-    queries << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Software Developer', 'BIM', 'Applied', '28/04/2024', 'https://bim.com.br', "
-               "'Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros."
-               " Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus "
-               "dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis."
-               " Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc"
-               " in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus "
-               "imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue.')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Python Developer', 'BAM', 'Finished', '25/04/2024', 'https://bam.com.br', "
-               "'Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed.')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Data Analyst', 'BEM', 'Technical Test', '13/04/2024', 'em@bem.br', "
-               "'-')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('C++ Developer', 'BOM', 'HR Interview (30/04)', '27/04/2024', 'https://bom.com.br', "
-               "'Lorem ipsum dolor sit amet, consectetur adipiscing elit.')";
-    if (rowCount == 0) {
-        QSqlQuery insertQuery(db);
-        for (const auto& query : queries) {
-            if (!insertQuery.exec(query)) {
-                qDebug() << insertQuery.lastError().text();
-                return;
-            }
-        }
-        qDebug() << "Mock data added successfully!";
     }
 }
 
@@ -160,7 +99,7 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
     detailsDialog->exec();
 }
 
-void clearDialogFields(DetailsDialog *detailsDialog) {
+void MainWindow::clearDialogFields() {
     detailsDialog->idLineEdit->setText("");
     detailsDialog->titleLineEdit->setText("");
     detailsDialog->companyLineEdit->setText("");
@@ -170,9 +109,31 @@ void clearDialogFields(DetailsDialog *detailsDialog) {
     detailsDialog->detailsTextEdit->clear();
 }
 
+void MainWindow::exportToDB() {
+    if (!dbManager) {
+        QMessageBox::critical(this, "Error", "DB manager is not initialized.");
+        return;
+    }
+    dbManager->exportDatabase();
+}
+
+void MainWindow::importFromDB() {
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Open Database File"), QDir::homePath(), tr("SQLite Database (*.db)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+    if (!dbManager->openDatabase(filePath)) {
+        QMessageBox::critical(this, "Error", "Failed to open database.");
+        return;
+    }
+    dbManager->loadModel();
+    tableView->setModel(dbManager->getModel());
+    QMessageBox::information(this, "Success", "Database loaded successfully.");
+}
+
 
 void MainWindow::onAddNewItemButtonClicked() {
-    clearDialogFields(detailsDialog);
+    clearDialogFields();
     detailsDialog->idLineEdit->hide();
     detailsDialog->idLabel->hide();
     detailsDialog->titleLineEdit->setFocus();
@@ -201,7 +162,7 @@ void MainWindow::onDeleteButtonClicked() {
         qDebug() << "Error:" << query.lastError().text();
         return;
     }
-    model->select();
+    model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(this, "Success", "The appointment has been deleted successfully.");
 }
 
@@ -226,20 +187,14 @@ void MainWindow::onDuplicateButtonClicked() {
         qDebug() << "Error: " << query.lastError().text();
         return;
     }
-    model->select();
+    model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(this, "Success", "The appointment has been duplicated successfully.");
 }
 
 void MainWindow::onSearchButtonClicked() {
-    QString searchText = ui->searchLineEdit->text();
-    if (searchText.isEmpty()) {
-        model->setFilter("");
-        return;
-    }
-    QString filter = QString("job_title LIKE '%%1%' OR company LIKE '%%1%' "
-                             "OR status LIKE '%%1%' OR application_date LIKE '%%1%' "
-                             "OR url_email LIKE '%%1%' OR details LIKE '%%1%'").arg(searchText);
-    model->setFilter(filter);
+    QString searchString = ui->searchLineEdit->text();
+    QRegularExpression regex(searchString, QRegularExpression::CaseInsensitiveOption);
+    sortProxyModel->setFilterRegularExpression(regex);
 }
 
 void MainWindow::onDetailsSubmitButtonClicked() {
@@ -267,7 +222,7 @@ void MainWindow::onDetailsSubmitButtonClicked() {
         detailsDialog->close();
         return;
     }
-    model->select();
+    model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(detailsDialog, "Success",
         QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
     detailsDialog->close();
@@ -282,7 +237,7 @@ void MainWindow::onClipboardCheckBoxClicked() {
     }
 }
 
-void MainWindow::onSystemTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
+void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
     if (reason == QSystemTrayIcon::DoubleClick) {
         restoreWindow();
     }
@@ -303,25 +258,39 @@ void MainWindow::onClipboardDataChanged() {
 }
 
 void MainWindow::onTrayMessageClicked() {
-    restoreWindow();
-    activateWindow();
-    raise();
+    if (isMinimized() && ui->trayCheckBox->isChecked()) {
+        restoreWindow();
+    }
     QString clipboardText = QApplication::clipboard()->text();
-    clearDialogFields(detailsDialog);
+    clearDialogFields();
     detailsDialog->urlLineEdit->setText(clipboardText);
-    // ... If domain is known, fill in other fields
+    // TODO: If domain is known, fill in other fields
     detailsDialog->idLineEdit->hide();
     detailsDialog->idLabel->hide();
     detailsDialog->titleLineEdit->setFocus();
-    detailsDialog->exec();
+    detailsDialog->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    detailsDialog->showNormal();
+    detailsDialog->raise();
+    detailsDialog->activateWindow();
 }
 
 void MainWindow::restoreWindow() {
-    show();
+    bool wasMaximized = isMaximized();
+    showNormal();
+    if (wasMaximized) {
+        showMaximized();
+    }
+    raise();
+    activateWindow();
 }
 
-void MainWindow::onTrayButtonClicked() {
-    hide();
+void MainWindow::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::WindowStateChange) {
+        if (isMinimized() && ui->trayCheckBox->isChecked()) {
+            hide();
+        }
+    }
+    QMainWindow::changeEvent(event);
 }
 
 MainWindow::~MainWindow() {
