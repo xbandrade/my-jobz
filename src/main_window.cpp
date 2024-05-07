@@ -20,6 +20,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         layout->setAlignment(Qt::AlignCenter);
     }
     detailsDialog = new DetailsDialog(this);
+    QActionGroup *itemsPerPageGroup = new QActionGroup(this);
+    itemsPerPageGroup->setExclusive(true);
+    itemsPerPageGroup->addAction(ui->action10Items);
+    itemsPerPageGroup->addAction(ui->action15Items);
+    itemsPerPageGroup->addAction(ui->action20Items);
+    itemsPerPageGroup->addAction(ui->action40Items);
+    ui->action10Items->setData(10);
+    ui->action15Items->setData(15);
+    ui->action20Items->setData(20);
+    ui->action40Items->setData(40);
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
         dbManager = new DatabaseManager(this);
@@ -34,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         dbManager->addMockData();
         model = dbManager->getModel();
         model->setQuery("SELECT * FROM jobs");
-        sortProxyModel = new DateSortProxyModel(this);
+        sortProxyModel = new SortProxyModel(this);
         sortProxyModel->setSourceModel(model);
         tableView->setModel(sortProxyModel);
         QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
@@ -42,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
             model->setHeaderData(n, Qt::Horizontal, headers[n]);
         }
         tableView->horizontalHeader()->setStyleSheet(
-            "QHeaderView::section { background-color: #495057;"
+            "QHeaderView::section { background-color: #495057; padding-top: 2px; padding-bottom: 2px; "
             "font-family: Nunito; font-size: 16px; color: #CED4DA; }"
         );
         tableView->resizeColumnToContents(0);
@@ -54,24 +64,33 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         tableView->setSortingEnabled(true);
         tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
         tableView->model()->sort(0, Qt::DescendingOrder);
-        // Signal/Slot connections
-        connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
-        connect(ui->addNewItemButton, &QPushButton::clicked, this, &MainWindow::onAddNewItemButtonClicked);
-        connect(ui->duplicateButton, &QPushButton::clicked, this, &MainWindow::onDuplicateButtonClicked);
-        connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
-        connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchButtonClicked);
-        connect(ui->searchLineEdit, &QLineEdit::returnPressed, ui->searchButton, &QPushButton::click);
-        connect(ui->clipboardCheckBox, &QCheckBox::clicked, this, &MainWindow::onClipboardCheckBoxClicked);
-        connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
-        connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onTrayIconActivated);
-        connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
-        connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
-        connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
-        connect(trayIcon, &QSystemTrayIcon::messageClicked, this, &MainWindow::onTrayMessageClicked);
-        connect(ui->actionExportToDB, &QAction::triggered, this, &MainWindow::exportToDB);
-        connect(ui->actionImportFromDB, &QAction::triggered, this, &MainWindow::importFromDB);
-
+        ui->prevPageButton->setEnabled(false);
+        if (sortProxyModel->pageCount() <= 1) {
+            ui->nextPageButton->setEnabled(false);
+        }
     }
+    // Signal/Slot connections
+    connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
+    connect(ui->addNewItemButton, &QPushButton::clicked, this, &MainWindow::onAddNewItemButtonClicked);
+    connect(ui->duplicateButton, &QPushButton::clicked, this, &MainWindow::onDuplicateButtonClicked);
+    connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
+    connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchButtonClicked);
+    connect(ui->searchLineEdit, &QLineEdit::returnPressed, ui->searchButton, &QPushButton::click);
+    connect(ui->clipboardCheckBox, &QCheckBox::clicked, this, &MainWindow::onClipboardCheckBoxClicked);
+    connect(ui->prevPageButton, &QCheckBox::clicked, this, &MainWindow::onPrevPageButtonClicked);
+    connect(ui->nextPageButton, &QCheckBox::clicked, this, &MainWindow::onNextPageButtonClicked);
+    connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
+    connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onTrayIconActivated);
+    connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+    connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
+    connect(trayIcon, &QSystemTrayIcon::messageClicked, this, &MainWindow::onTrayMessageClicked);
+    connect(ui->actionExportToDB, &QAction::triggered, this, &MainWindow::exportToDB);
+    connect(ui->actionImportFromDB, &QAction::triggered, this, &MainWindow::importFromDB);
+    connect(ui->action10Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
+    connect(ui->action15Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
+    connect(ui->action20Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
+    connect(ui->action40Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
 }
 
 void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
@@ -97,6 +116,18 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
     detailsDialog->idLabel->show();
     detailsDialog->titleLineEdit->setFocus();
     detailsDialog->exec();
+}
+
+void MainWindow::onItemsPerPageChanged() {
+    QAction *action = qobject_cast<QAction*>(sender());
+    if (action) {
+        int itemsPerPage = action->data().toInt();
+        sortProxyModel->setItemsPerPage(itemsPerPage);
+        sortProxyModel->setCurrentPage(1);
+        ui->pageLabel->setText(QString("1"));
+        ui->prevPageButton->setEnabled(false);
+        ui->nextPageButton->setEnabled(sortProxyModel->pageCount() > 1);
+    }
 }
 
 void MainWindow::clearDialogFields() {
@@ -138,6 +169,38 @@ void MainWindow::onAddNewItemButtonClicked() {
     detailsDialog->idLabel->hide();
     detailsDialog->titleLineEdit->setFocus();
     detailsDialog->exec();
+}
+
+void MainWindow::onPrevPageButtonClicked() {
+    int currentPage = sortProxyModel->getCurrentPage();
+    if (currentPage <= 1) {
+        return;
+    }
+    sortProxyModel->setCurrentPage(currentPage - 1);
+    int newPage = sortProxyModel->getCurrentPage();
+    if (newPage < currentPage) {
+        ui->pageLabel->setText(QString::number(newPage));
+        ui->nextPageButton->setEnabled(true);
+        if (newPage == 1) {
+            ui->prevPageButton->setEnabled(false);
+        }
+    }
+}
+
+void MainWindow::onNextPageButtonClicked() {
+    int currentPage = sortProxyModel->getCurrentPage();
+    if (currentPage >= sortProxyModel->pageCount()) {
+        return;
+    }
+    sortProxyModel->setCurrentPage(currentPage + 1);
+    int newPage = sortProxyModel->getCurrentPage();
+    if (newPage > currentPage) {
+        ui->pageLabel->setText(QString::number(newPage));
+        ui->prevPageButton->setEnabled(true);
+        if (newPage == sortProxyModel->pageCount()) {
+            ui->nextPageButton->setEnabled(false);
+        }
+    }
 }
 
 void MainWindow::onDeleteButtonClicked() {

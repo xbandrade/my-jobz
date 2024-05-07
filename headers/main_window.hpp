@@ -24,6 +24,7 @@
 #include <QPushButton>
 #include <QClipboard>
 #include <QRegularExpression>
+#include <QActionGroup>
 #include "details_dialog.hpp"
 #include "proxy_model.hpp"
 #include "database_manager.hpp"
@@ -53,6 +54,9 @@ private slots:
     void onClipboardCheckBoxClicked();
     void onClipboardDataChanged();
     void onTrayMessageClicked();
+    void onPrevPageButtonClicked();
+    void onNextPageButtonClicked();
+    void onItemsPerPageChanged();
     void exportToDB();
     void importFromDB();
 
@@ -66,7 +70,7 @@ private:
     QTableView *tableView;
     DetailsDialog *detailsDialog;
     QSystemTrayIcon *trayIcon;
-    DateSortProxyModel *sortProxyModel;
+    SortProxyModel *sortProxyModel;
     QString previousClipboard;
     DatabaseManager* dbManager;
     bool showClipboardHint;

@@ -42,7 +42,7 @@
 QPushButton {
 	background-color: #CED4DA ;
 	border-radius: 10px;
- 	padding: 5px 10px; 
+ 	padding: 7px 10px; 
 	border: 1px solid #74A2C9;
 }
 
@@ -212,6 +212,8 @@ QCheckBox {
     background-color: rgb(230, 230, 230);
 	border-radius: 10px;
 	padding-left: 8px;
+	padding-top: 4px;
+	padding-bottom: 4px;
 }</string>
           </property>
          </widget>
@@ -358,15 +360,147 @@ QCheckBox {
         <property name="styleSheet">
          <string notr="true">QTableView {
 	background-color: #8d959d;
+    border: 1px solid #6C757D; 
 }
+
 QTableView::item:selected {
 	background-color: #6C757D ;
+}
+
+QScrollBar:vertical {
+    border: 1px solid #8d959d;
+    background: #f7f7f7; 
+    width: 15px;
+    margin: 22px 0 22px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #6C757D;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical {
+    background: #C0C0C0;
+    height: 20px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical {
+    background: #C0C0C0;
+    height: 20px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:vertical {
+    border-top: 1px solid #8d959d;
+}
+
+QScrollBar::sub-line:vertical {
+    border-bottom: 1px solid #8d959d; 
 }</string>
         </property>
         <attribute name="horizontalHeaderCascadingSectionResizes">
          <bool>false</bool>
         </attribute>
+        <attribute name="verticalHeaderDefaultSectionSize">
+         <number>46</number>
+        </attribute>
        </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout4">
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="prevPageButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Nunito</family>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="pageLabel">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Nunito</family>
+            <pointsize>15</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>1</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="nextPageButton">
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Nunito</family>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
@@ -430,7 +564,18 @@ QMenuBar::item:selected:disabled {
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuItemsPerPage">
+     <property name="title">
+      <string>Items Per Page</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="action10Items"/>
+     <addaction name="action15Items"/>
+     <addaction name="action20Items"/>
+     <addaction name="action40Items"/>
+    </widget>
     <addaction name="actionEnable_Dark_Mode"/>
+    <addaction name="menuItemsPerPage"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -525,6 +670,41 @@ QMenuBar::item:selected:disabled {
    </property>
    <property name="text">
     <string>Set default status</string>
+   </property>
+  </action>
+  <action name="action10Items">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>10 Items</string>
+   </property>
+  </action>
+  <action name="action15Items">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>15 Items</string>
+   </property>
+  </action>
+  <action name="action20Items">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>20 Items</string>
+   </property>
+  </action>
+  <action name="action40Items">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>40 Items</string>
    </property>
   </action>
  </widget>
