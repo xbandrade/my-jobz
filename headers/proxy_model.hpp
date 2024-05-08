@@ -13,6 +13,7 @@ public:
     int getCurrentPage();
     void setItemsPerPage(int items);
     int pageCount() const;
+    void setHideFinished(bool hide);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
@@ -21,6 +22,7 @@ protected:
 private:
     int currentPage;
     int itemsPerPage;
+    bool hideFinishedCheckBox;
 };
 
 #endif // PROXY_MODEL_HPP

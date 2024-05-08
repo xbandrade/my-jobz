@@ -1,5 +1,10 @@
 <RCC>
     <qresource prefix="/">
         <file>application.png</file>
+        <file>application.ico</file>
+        <file>translations/myjobz_en.ts</file>
+        <file>translations/myjobz_pt_BR.qm</file>
+        <file>translations/myjobz_pt_BR.ts</file>
+        <file>translations/myjobz_en.qm</file>
     </qresource>
 </RCC>

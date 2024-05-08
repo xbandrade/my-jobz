@@ -59,6 +59,7 @@ private slots:
     void onItemsPerPageChanged();
     void exportToDB();
     void importFromDB();
+    void onCustomContextMenuRequested(const QPoint &pos);
 
 protected:
     void changeEvent(QEvent *event);
@@ -75,6 +76,7 @@ private:
     DatabaseManager* dbManager;
     bool showClipboardHint;
     void clearDialogFields();
+    void markAsFinished();
 };
 
 #endif // MAIN_WINDOW_HPP

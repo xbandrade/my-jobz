@@ -237,7 +237,7 @@ QCheckBox {
         <item>
          <widget class="QCheckBox" name="hideFinishedCheckBox">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="font">
            <font>
@@ -246,7 +246,7 @@ QCheckBox {
            </font>
           </property>
           <property name="text">
-           <string>Hide Finished</string>
+           <string>Hide Finished Jobs</string>
           </property>
          </widget>
         </item>

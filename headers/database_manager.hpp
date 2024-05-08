@@ -24,6 +24,8 @@ public:
     bool createJobsTableIfNotExists();
     void addMockData();
     void exportDatabase();
+    void createDatabaseBackup(const QString& backupFilePath);
+    void updateStatus(int id, const QString& status);
     QSqlQueryModel* getModel() const;
 
 private:

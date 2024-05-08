@@ -5,16 +5,32 @@ DatabaseManager::DatabaseManager(QWidget *parent) {
     model = new QSqlQueryModel();
 }
 
+void DatabaseManager::createDatabaseBackup(const QString& backupFilePath) {
+    if (db.isOpen()) {
+        db.close();
+    }
+    QFile::copy(db.databaseName(), backupFilePath);
+    if (!db.open()) {
+        qDebug() << "Failed to reopen database after creating backup";
+        return;
+    }
+}
+
 bool DatabaseManager::openDatabase(const QString& filePath) {
     db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(filePath);
-    return db.open();
+    bool success = db.open();
+    if (success) {
+        QString backupFilePath = filePath + ".bak";
+        createDatabaseBackup(backupFilePath);
+    }
+    return success;
 }
 
 void DatabaseManager::loadModel() {
     model->setQuery("SELECT * FROM jobs");
     if (model->lastError().isValid()) {
-        qDebug() << "Error loading model:" << model->lastError().text();
+        qDebug() << "Error: " << model->lastError().text();
     }
 }
 
@@ -31,14 +47,31 @@ bool DatabaseManager::createJobsTableIfNotExists() {
                       "status TEXT,"
                       "application_date TEXT,"
                       "url_email TEXT,"
-                      "details TEXT"
+                      "details TEXT,"
+                      "is_finished BOOLEAN DEFAULT 0"
                       ");");
+}
+
+void DatabaseManager::updateStatus(int id, const QString& status) {
+    QSqlQuery query(db);
+    query.prepare("UPDATE jobs SET status = :status, is_finished = :is_finished WHERE id = :id");
+    query.bindValue(":status", status);
+    query.bindValue(":id", id);
+    static std::vector<QString> finishedStatus = {"Finished", "Done", "Complete", "Rejected", "Approved"};
+    bool isFinished = std::find(finishedStatus.begin(), finishedStatus.end(), status) != finishedStatus.end();
+    query.bindValue(":is_finished", isFinished);
+    if (!query.exec()) {
+        QMessageBox::critical(parent, "Error", "Failed to update status");
+        return;
+    }
+    loadModel();
+    QMessageBox::information(parent, "Success", "Status updated successfully");
 }
 
 void DatabaseManager::addMockData() {
     QSqlQuery countQuery(db);
     if (!countQuery.exec("SELECT COUNT(*) FROM jobs")) {
-        qDebug() << "Error checking table emptiness:" << countQuery.lastError().text();
+        qDebug() << "Error: " << countQuery.lastError().text();
         return;
     }
     countQuery.next();

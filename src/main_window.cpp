@@ -41,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
             qDebug() << "Error creating table";
             return;
         }
-        dbManager->addMockData();
         model = dbManager->getModel();
         model->setQuery("SELECT * FROM jobs");
         sortProxyModel = new SortProxyModel(this);
@@ -55,7 +54,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
             "QHeaderView::section { background-color: #495057; padding-top: 2px; padding-bottom: 2px; "
             "font-family: Nunito; font-size: 16px; color: #CED4DA; }"
         );
+        tableView->setColumnHidden(7, true);
         tableView->resizeColumnToContents(0);
+        tableView->setContextMenuPolicy(Qt::CustomContextMenu);
         tableView->verticalHeader()->setVisible(false);
         tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -71,6 +72,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     }
     // Signal/Slot connections
     connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
+    connect(tableView, &QTableView::customContextMenuRequested, this, &MainWindow::onCustomContextMenuRequested);
     connect(ui->addNewItemButton, &QPushButton::clicked, this, &MainWindow::onAddNewItemButtonClicked);
     connect(ui->duplicateButton, &QPushButton::clicked, this, &MainWindow::onDuplicateButtonClicked);
     connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
@@ -91,10 +93,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     connect(ui->action15Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action20Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action40Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
+    connect(ui->hideFinishedCheckBox, &QCheckBox::stateChanged, this, [=](int state){
+        sortProxyModel->setHideFinished(state == Qt::Checked);
+    });
 }
 
-void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
-{
+void MainWindow::onTableCellDoubleClicked(const QModelIndex &index) {
     QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
     QModelIndex idIndex = model->index(sourceIndex.row(), 0);
     int id = model->data(idIndex).toInt();
@@ -116,6 +120,21 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index)
     detailsDialog->idLabel->show();
     detailsDialog->titleLineEdit->setFocus();
     detailsDialog->exec();
+}
+
+void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
+    QModelIndex index = tableView->indexAt(pos);
+    if (index.isValid()) {
+        QMenu contextMenu(tr("Context Menu"), this);
+        QAction *markAsFinishedAction = new QAction(tr("Mark as Finished"), this);
+        connect(markAsFinishedAction, &QAction::triggered, this, [this, index]() {
+            QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+            int id = model->data(model->index(sourceIndex.row(), 0)).toInt();
+            dbManager->updateStatus(id, "Finished");
+        });
+        contextMenu.addAction(markAsFinishedAction);
+        contextMenu.exec(tableView->viewport()->mapToGlobal(pos));
+    }
 }
 
 void MainWindow::onItemsPerPageChanged() {
@@ -161,7 +180,6 @@ void MainWindow::importFromDB() {
     tableView->setModel(dbManager->getModel());
     QMessageBox::information(this, "Success", "Database loaded successfully.");
 }
-
 
 void MainWindow::onAddNewItemButtonClicked() {
     clearDialogFields();
@@ -226,6 +244,7 @@ void MainWindow::onDeleteButtonClicked() {
         return;
     }
     model->setQuery("SELECT * FROM jobs");
+    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
     QMessageBox::information(this, "Success", "The appointment has been deleted successfully.");
 }
 
@@ -251,6 +270,7 @@ void MainWindow::onDuplicateButtonClicked() {
         return;
     }
     model->setQuery("SELECT * FROM jobs");
+    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
     QMessageBox::information(this, "Success", "The appointment has been duplicated successfully.");
 }
 
@@ -276,7 +296,7 @@ void MainWindow::onDetailsSubmitButtonClicked() {
     query.bindValue(":status", detailsDialog->statusLineEdit->text());
     query.bindValue(":appDate", detailsDialog->appDateLineEdit->text());
     query.bindValue(":url", detailsDialog->urlLineEdit->text());
-    query.bindValue(":details", detailsDialog->detailsTextEdit->toPlainText());
+    query.bindValue(":details", detailsDialog->detailsTextEdit->toPlainText().trimmed());
     if (!isNewEntry) {
         query.bindValue(":id", id);
     }
@@ -288,6 +308,7 @@ void MainWindow::onDetailsSubmitButtonClicked() {
     model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(detailsDialog, "Success",
         QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
+    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
     detailsDialog->close();
 }
 
