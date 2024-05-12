@@ -30,15 +30,23 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     ui->action15Items->setData(15);
     ui->action20Items->setData(20);
     ui->action40Items->setData(40);
+    QActionGroup *setInitialDate = new QActionGroup(this);
+    setInitialDate->setExclusive(true);
+    setInitialDate->addAction(ui->actionToday);
+    setInitialDate->addAction(ui->actionBlankDate);
+    QActionGroup *setInitialStatus = new QActionGroup(this);
+    setInitialStatus->setExclusive(true);
+    setInitialStatus->addAction(ui->actionApplied);
+    setInitialStatus->addAction(ui->actionBlankStatus);
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
         dbManager = new DatabaseManager(this);
         if (!dbManager->openDatabase("database.db")) {
-            qDebug() << "Error: could not open database";
+            QMessageBox::critical(parent, "Error", "IO Error");
             return;
         }
         if (!dbManager->createJobsTableIfNotExists()) {
-            qDebug() << "Error creating table";
+            QMessageBox::critical(parent, "Error", "Error creating table");
             return;
         }
         model = dbManager->getModel();
@@ -47,8 +55,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         sortProxyModel->setSourceModel(model);
         tableView->setModel(sortProxyModel);
         QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
-        for (int n = 0; n < headers.length(); ++n) {
-            model->setHeaderData(n, Qt::Horizontal, headers[n]);
+        for (int col = 0; col < headers.length(); ++col) {
+            model->setHeaderData(col, Qt::Horizontal, headers[col]);
         }
         tableView->horizontalHeader()->setStyleSheet(
             "QHeaderView::section { background-color: #495057; padding-top: 2px; padding-bottom: 2px; "
@@ -87,14 +95,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
     connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::onClipboardDataChanged);
     connect(trayIcon, &QSystemTrayIcon::messageClicked, this, &MainWindow::onTrayMessageClicked);
-    connect(ui->actionExportToDB, &QAction::triggered, this, &MainWindow::exportToDB);
-    connect(ui->actionImportFromDB, &QAction::triggered, this, &MainWindow::importFromDB);
+    connect(ui->actionExportToDB, &QAction::triggered, this, &MainWindow::onExportToDBTriggered);
+    connect(ui->actionImportFromDB, &QAction::triggered, this, &MainWindow::onImportFromDBTriggered);
+    connect(ui->actionExportToCSV, &QAction::triggered, this, &MainWindow::onExportToCSVTriggered);
     connect(ui->action10Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action15Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action20Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action40Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->hideFinishedCheckBox, &QCheckBox::stateChanged, this, [=](int state){
         sortProxyModel->setHideFinished(state == Qt::Checked);
+    });
+    connect(ui->actionGithub, &QAction::triggered, this, [](){
+        QDesktopServices::openUrl(QUrl("https://github.com/xbandrade/my-jobz"));
+    });
+    connect(ui->actionAbout, &QAction::triggered, this, [](){
+        QMessageBox aboutBox;
+        aboutBox.setWindowTitle("About MyJobz");
+        aboutBox.setTextFormat(Qt::RichText);
+        aboutBox.setText("<center>Manage your job applications with MyJobz<br>"
+                         "Visit the <a href=\"https://www.example.com\">github repository</a>"
+                         "for the documentation<br>and more information<br>v0.0.1</center>");
+        aboutBox.exec();
     });
 }
 
@@ -133,6 +154,21 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
             dbManager->updateStatus(id, "Finished");
         });
         contextMenu.addAction(markAsFinishedAction);
+        QAction *goToUrlEmailAction = new QAction(tr("Go To URL/Email"), this);
+        goToUrlEmailAction->setEnabled(false);
+        connect(goToUrlEmailAction, &QAction::triggered, this, [this, index]() {
+            QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+            QString data = model->data(model->index(sourceIndex.row(), 5)).toString();
+            static QString mailSearchUrl = "https://mail.google.com/mail/u/0/#search/";
+            QDesktopServices::openUrl(QUrl(
+                ((data.startsWith("http://") || data.startsWith("https://")) ? "" : mailSearchUrl) + data));
+        });
+        contextMenu.addAction(goToUrlEmailAction);
+        QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+        QString data = model->data(model->index(sourceIndex.row(), 5)).toString();
+        if (data.startsWith("http://") || data.startsWith("https://") || data.contains("@")) {
+            goToUrlEmailAction->setEnabled(true);
+        }
         contextMenu.exec(tableView->viewport()->mapToGlobal(pos));
     }
 }
@@ -149,6 +185,10 @@ void MainWindow::onItemsPerPageChanged() {
     }
 }
 
+void MainWindow::onExportToCSVTriggered() {
+    dbManager->exportToCSV();
+}
+
 void MainWindow::clearDialogFields() {
     detailsDialog->idLineEdit->setText("");
     detailsDialog->titleLineEdit->setText("");
@@ -159,7 +199,7 @@ void MainWindow::clearDialogFields() {
     detailsDialog->detailsTextEdit->clear();
 }
 
-void MainWindow::exportToDB() {
+void MainWindow::onExportToDBTriggered() {
     if (!dbManager) {
         QMessageBox::critical(this, "Error", "DB manager is not initialized.");
         return;
@@ -167,17 +207,18 @@ void MainWindow::exportToDB() {
     dbManager->exportDatabase();
 }
 
-void MainWindow::importFromDB() {
+void MainWindow::onImportFromDBTriggered() {
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Database File"), QDir::homePath(), tr("SQLite Database (*.db)"));
     if (filePath.isEmpty()) {
         return;
     }
+    tableView->setModel(nullptr);
+    dbManager->closeDatabase();
     if (!dbManager->openDatabase(filePath)) {
         QMessageBox::critical(this, "Error", "Failed to open database.");
         return;
     }
-    dbManager->loadModel();
-    tableView->setModel(dbManager->getModel());
+    tableView->setModel(sortProxyModel);
     QMessageBox::information(this, "Success", "Database loaded successfully.");
 }
 
@@ -185,6 +226,13 @@ void MainWindow::onAddNewItemButtonClicked() {
     clearDialogFields();
     detailsDialog->idLineEdit->hide();
     detailsDialog->idLabel->hide();
+    QDate today = QDate::currentDate();
+    if (ui->actionToday->isChecked()) {
+        detailsDialog->appDateLineEdit->setText(today.toString("dd/MM/yyyy"));
+    }
+    if (ui->actionApplied->isChecked()) {
+        detailsDialog->statusLineEdit->setText("Applied");
+    }
     detailsDialog->titleLineEdit->setFocus();
     detailsDialog->exec();
 }
@@ -223,6 +271,7 @@ void MainWindow::onNextPageButtonClicked() {
 
 void MainWindow::onDeleteButtonClicked() {
     QModelIndex selectedIndex = tableView->selectionModel()->currentIndex();
+    QString outputStr;
     if (!selectedIndex.isValid()) {
         QMessageBox::warning(this, "Warning", "Please select any cell of an item before deleting.");
         return;
@@ -236,12 +285,15 @@ void MainWindow::onDeleteButtonClicked() {
     }
     QModelIndex sourceIndex = sortProxyModel->mapToSource(selectedIndex);
     int id = model->data(model->index(sourceIndex.row(), 0)).toInt();
-    QSqlQuery query(db);
-    query.prepare("DELETE FROM jobs WHERE id = :id");
-    query.bindValue(":id", id);
-    if (!query.exec()) {
-        qDebug() << "Error:" << query.lastError().text();
-        return;
+    {
+        QSqlQuery query(db);
+        query.prepare("DELETE FROM jobs WHERE id = :id");
+        query.bindValue(":id", id);
+        if (!query.exec()) {
+            outputStr += "Error: " + query.lastError().text();
+            QMessageBox::critical(this, "Error", outputStr);
+            return;
+        }
     }
     model->setQuery("SELECT * FROM jobs");
     ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
@@ -250,24 +302,28 @@ void MainWindow::onDeleteButtonClicked() {
 
 void MainWindow::onDuplicateButtonClicked() {
     QModelIndex selectedIndex = tableView->selectionModel()->currentIndex();
+    QString outputStr;
     if (!selectedIndex.isValid()) {
         QMessageBox::warning(this, "Warning", "Please select any cell of an item before duplicating.");
         return;
     }
     QModelIndex sourceIndex = sortProxyModel->mapToSource(selectedIndex);
     QSqlRecord record = model->record(sourceIndex.row());
-    QSqlQuery query(db);
-    query.prepare("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                  "VALUES (:job_title, :company, :status, :application_date, :url_email, :details)");
-    query.bindValue(":job_title", record.value("job_title"));
-    query.bindValue(":company", record.value("company"));
-    query.bindValue(":status", record.value("status"));
-    query.bindValue(":application_date", record.value("application_date"));
-    query.bindValue(":url_email", record.value("url_email"));
-    query.bindValue(":details", record.value("details"));
-    if (!query.exec()) {
-        qDebug() << "Error: " << query.lastError().text();
-        return;
+    {
+        QSqlQuery query(db);
+        query.prepare("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                      "VALUES (:job_title, :company, :status, :application_date, :url_email, :details)");
+        query.bindValue(":job_title", record.value("job_title"));
+        query.bindValue(":company", record.value("company"));
+        query.bindValue(":status", record.value("status"));
+        query.bindValue(":application_date", record.value("application_date"));
+        query.bindValue(":url_email", record.value("url_email"));
+        query.bindValue(":details", record.value("details"));
+        if (!query.exec()) {
+            outputStr += "Error: " + query.lastError().text();
+            QMessageBox::critical(this, "Error", outputStr);
+            return;
+        }
     }
     model->setQuery("SELECT * FROM jobs");
     ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
@@ -284,26 +340,28 @@ void MainWindow::onDetailsSubmitButtonClicked() {
     QString idText = detailsDialog->idLineEdit->text();
     int id = idText.isEmpty() ? -1 : idText.toInt();
     bool isNewEntry = id < 0;
-    QSqlQuery query(db);
-    query.prepare(isNewEntry ?
-                  "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                  "VALUES (:title, :company, :status, :appDate, :url, :details)" :
-                  "UPDATE jobs SET job_title = :title, company = :company, status = :status, "
-                  "application_date = :appDate, url_email = :url, details = :details "
-                  "WHERE id = :id");
-    query.bindValue(":title", detailsDialog->titleLineEdit->text());
-    query.bindValue(":company", detailsDialog->companyLineEdit->text());
-    query.bindValue(":status", detailsDialog->statusLineEdit->text());
-    query.bindValue(":appDate", detailsDialog->appDateLineEdit->text());
-    query.bindValue(":url", detailsDialog->urlLineEdit->text());
-    query.bindValue(":details", detailsDialog->detailsTextEdit->toPlainText().trimmed());
-    if (!isNewEntry) {
-        query.bindValue(":id", id);
-    }
-    if (!query.exec()) {
-        QMessageBox::critical(detailsDialog, "Error", "Failed to update appointment");
-        detailsDialog->close();
-        return;
+    {
+        QSqlQuery query(db);
+        query.prepare(isNewEntry ?
+                      "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
+                      "VALUES (:title, :company, :status, :appDate, :url, :details)" :
+                      "UPDATE jobs SET job_title = :title, company = :company, status = :status, "
+                      "application_date = :appDate, url_email = :url, details = :details "
+                      "WHERE id = :id");
+        query.bindValue(":title", detailsDialog->titleLineEdit->text());
+        query.bindValue(":company", detailsDialog->companyLineEdit->text());
+        query.bindValue(":status", detailsDialog->statusLineEdit->text());
+        query.bindValue(":appDate", detailsDialog->appDateLineEdit->text());
+        query.bindValue(":url", detailsDialog->urlLineEdit->text());
+        query.bindValue(":details", detailsDialog->detailsTextEdit->toPlainText().trimmed());
+        if (!isNewEntry) {
+            query.bindValue(":id", id);
+        }
+        if (!query.exec()) {
+            QMessageBox::critical(detailsDialog, "Error", "Failed to update appointment");
+            detailsDialog->close();
+            return;
+        }
     }
     model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(detailsDialog, "Success",
@@ -348,9 +406,15 @@ void MainWindow::onTrayMessageClicked() {
     QString clipboardText = QApplication::clipboard()->text();
     clearDialogFields();
     detailsDialog->urlLineEdit->setText(clipboardText);
-    // TODO: If domain is known, fill in other fields
+    QDate today = QDate::currentDate();
     detailsDialog->idLineEdit->hide();
     detailsDialog->idLabel->hide();
+    if (ui->actionToday->isChecked()) {
+        detailsDialog->appDateLineEdit->setText(today.toString("dd/MM/yyyy"));
+    }
+    if (ui->actionApplied->isChecked()) {
+        detailsDialog->statusLineEdit->setText("Applied");
+    }
     detailsDialog->titleLineEdit->setFocus();
     detailsDialog->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     detailsDialog->showNormal();

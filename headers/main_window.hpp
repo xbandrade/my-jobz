@@ -1,6 +1,7 @@
 #ifndef MAIN_WINDOW_HPP
 #define MAIN_WINDOW_HPP
 
+#include <stdexcept>
 #include <QMainWindow>
 #include <QStandardItemModel>
 #include <QTableView>
@@ -13,7 +14,6 @@
 #include <QDebug>
 #include <QSqlQuery>
 #include <QMessageBox>
-#include <stdexcept>
 #include <QSqlError>
 #include <QSqlDatabase>
 #include <QSqlTableModel>
@@ -25,6 +25,7 @@
 #include <QClipboard>
 #include <QRegularExpression>
 #include <QActionGroup>
+#include <QDesktopServices>
 #include "details_dialog.hpp"
 #include "proxy_model.hpp"
 #include "database_manager.hpp"
@@ -57,8 +58,9 @@ private slots:
     void onPrevPageButtonClicked();
     void onNextPageButtonClicked();
     void onItemsPerPageChanged();
-    void exportToDB();
-    void importFromDB();
+    void onExportToCSVTriggered();
+    void onExportToDBTriggered();
+    void onImportFromDBTriggered();
     void onCustomContextMenuRequested(const QPoint &pos);
 
 protected:

@@ -558,7 +558,7 @@ QMenuBar::item:selected:disabled {
     </property>
     <addaction name="actionImportFromDB"/>
     <addaction name="actionExportToDB"/>
-    <addaction name="actionExportToSS"/>
+    <addaction name="actionExportToCSV"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -601,8 +601,23 @@ QMenuBar::item:selected:disabled {
      <addaction name="actionEnglish"/>
      <addaction name="actionPortuguese"/>
     </widget>
+    <widget class="QMenu" name="menuSetInitialDate">
+     <property name="title">
+      <string>Set Initial Date</string>
+     </property>
+     <addaction name="actionToday"/>
+     <addaction name="actionBlankDate"/>
+    </widget>
+    <widget class="QMenu" name="menuSetInitialStatus">
+     <property name="title">
+      <string>Set Initial Status</string>
+     </property>
+     <addaction name="actionApplied"/>
+     <addaction name="actionBlankStatus"/>
+    </widget>
     <addaction name="menuLanguage"/>
-    <addaction name="actionSet_default_status"/>
+    <addaction name="menuSetInitialDate"/>
+    <addaction name="menuSetInitialStatus"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -640,18 +655,18 @@ QMenuBar::item:selected:disabled {
   </action>
   <action name="actionGithub">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Github</string>
    </property>
   </action>
-  <action name="actionExportToSS">
+  <action name="actionExportToCSV">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
-    <string>Export to Spreadsheet</string>
+    <string>Export to CSV</string>
    </property>
   </action>
   <action name="actionEnglish">
@@ -662,14 +677,6 @@ QMenuBar::item:selected:disabled {
   <action name="actionPortuguese">
    <property name="text">
     <string>Portuguese</string>
-   </property>
-  </action>
-  <action name="actionSet_default_status">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Set default status</string>
    </property>
   </action>
   <action name="action10Items">
@@ -705,6 +712,49 @@ QMenuBar::item:selected:disabled {
    </property>
    <property name="text">
     <string>40 Items</string>
+   </property>
+  </action>
+  <action name="actionToday">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Today</string>
+   </property>
+  </action>
+  <action name="actionBlankDate">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Blank</string>
+   </property>
+  </action>
+  <action name="actionApplied">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Applied</string>
+   </property>
+  </action>
+  <action name="actionBlankStatus">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Blank</string>
+   </property>
+  </action>
+  <action name="actionImportFromCSV">
+   <property name="text">
+    <string>Import from CSV</string>
    </property>
   </action>
  </widget>

@@ -26,6 +26,9 @@ set(TS_FILES
 )
 
 set(RESOURCES
+        resources/resources.qrc
+        resources/img/details.png
+        resources/img/myjobz.png
         ${TS_FILES}
         ${RESOURCE_FILES}
         ${ICON_RESOURCE}
@@ -37,7 +40,6 @@ set(PROJECT_SOURCES
         src/details_dialog.cpp
         src/proxy_model.cpp
         src/database_manager.cpp
-        resources/resources.qrc
 )
 
 set(PROJECT_HEADERS

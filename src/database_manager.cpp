@@ -11,7 +11,7 @@ void DatabaseManager::createDatabaseBackup(const QString& backupFilePath) {
     }
     QFile::copy(db.databaseName(), backupFilePath);
     if (!db.open()) {
-        qDebug() << "Failed to reopen database after creating backup";
+        QMessageBox::critical(parent, "Error", "Failed to reopen database after creating backup");
         return;
     }
 }
@@ -19,23 +19,25 @@ void DatabaseManager::createDatabaseBackup(const QString& backupFilePath) {
 bool DatabaseManager::openDatabase(const QString& filePath) {
     db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(filePath);
-    bool success = db.open();
-    if (success) {
+    bool ok = db.open();
+    if (ok) {
         QString backupFilePath = filePath + ".bak";
         createDatabaseBackup(backupFilePath);
+        loadModel();
     }
-    return success;
+    return ok;
 }
 
 void DatabaseManager::loadModel() {
     model->setQuery("SELECT * FROM jobs");
     if (model->lastError().isValid()) {
-        qDebug() << "Error: " << model->lastError().text();
+        QMessageBox::critical(parent, "Error", "Error: " +  model->lastError().text());
     }
 }
 
 void DatabaseManager::closeDatabase() {
     db.close();
+    QSqlDatabase::removeDatabase("QSQLITE");
 }
 
 bool DatabaseManager::createJobsTableIfNotExists() {
@@ -53,57 +55,21 @@ bool DatabaseManager::createJobsTableIfNotExists() {
 }
 
 void DatabaseManager::updateStatus(int id, const QString& status) {
-    QSqlQuery query(db);
-    query.prepare("UPDATE jobs SET status = :status, is_finished = :is_finished WHERE id = :id");
-    query.bindValue(":status", status);
-    query.bindValue(":id", id);
-    static std::vector<QString> finishedStatus = {"Finished", "Done", "Complete", "Rejected", "Approved"};
-    bool isFinished = std::find(finishedStatus.begin(), finishedStatus.end(), status) != finishedStatus.end();
-    query.bindValue(":is_finished", isFinished);
-    if (!query.exec()) {
-        QMessageBox::critical(parent, "Error", "Failed to update status");
-        return;
+    {
+        QSqlQuery query(db);
+        query.prepare("UPDATE jobs SET status = :status, is_finished = :is_finished WHERE id = :id");
+        query.bindValue(":status", status);
+        query.bindValue(":id", id);
+        static std::vector<QString> finishedStatus = {"Finished", "Done", "Complete", "Rejected", "Approved"};
+        bool isFinished = std::find(finishedStatus.begin(), finishedStatus.end(), status) != finishedStatus.end();
+        query.bindValue(":is_finished", isFinished);
+        if (!query.exec()) {
+            QMessageBox::critical(parent, "Error", "Failed to update status");
+            return;
+        }
     }
     loadModel();
     QMessageBox::information(parent, "Success", "Status updated successfully");
-}
-
-void DatabaseManager::addMockData() {
-    QSqlQuery countQuery(db);
-    if (!countQuery.exec("SELECT COUNT(*) FROM jobs")) {
-        qDebug() << "Error: " << countQuery.lastError().text();
-        return;
-    }
-    countQuery.next();
-    int rowCount = countQuery.value(0).toInt();
-    QList<QString> queries;
-    queries << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Software Developer', 'BIM', 'Applied', '28/04/2024', 'https://bim.com.br', "
-               "'Nam sit amet ligula lacus. Etiam vitae risus sit amet odio eleifend cursus sit amet ac eros."
-               " Vivamus elementum aliquam lorem, eu faucibus nulla scelerisque et. Sed ante odio, maximus "
-               "dignissim ullamcorper vitae, aliquet eu turpis. Phasellus auctor nunc vel velit feugiat convallis."
-               " Morbi facilisis iaculis velit, et tristique velit lobortis vel. Sed ipsum nunc, euismod vitae nunc"
-               " in, venenatis aliquam justo. Curabitur hendrerit, libero nec accumsan hendrerit, turpis metus "
-               "imperdiet purus, eu pulvinar lorem lectus vitae ex. Quisque dapibus maximus congue.')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Python Developer', 'BAM', 'Finished', '25/04/2024', 'https://bam.com.br', "
-               "'Maecenas tempus interdum ante, quis tincidunt mi vestibulum sed.')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('Data Analyst', 'BEM', 'Technical Test', '13/04/2024', 'em@bem.br', "
-               "'-')"
-            << "INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-               "VALUES ('C++ Developer', 'BOM', 'HR Interview (30/04)', '27/04/2024', 'https://bom.com.br', "
-               "'Lorem ipsum dolor sit amet, consectetur adipiscing elit.')";
-    if (rowCount == 0) {
-        QSqlQuery insertQuery(db);
-        for (const auto& query : queries) {
-            if (!insertQuery.exec(query)) {
-                qDebug() << insertQuery.lastError().text();
-                return;
-            }
-        }
-        qDebug() << "Mock data added successfully!";
-    }
 }
 
 void DatabaseManager::exportDatabase() {
@@ -111,52 +77,96 @@ void DatabaseManager::exportDatabase() {
     if (fileName.isEmpty()) {
         return;
     }
-    QSqlDatabase exportDb = QSqlDatabase::addDatabase("QSQLITE", "export");
-    exportDb.setDatabaseName(fileName);
-    QString outputStr;
-    if (!exportDb.open()) {
-        outputStr += "Error: " + exportDb.lastError().text();
-        QMessageBox::critical(parent, "Error", outputStr);
-        return;
-    }
-    QSqlQuery createTableQuery(exportDb);
-    if (!createTableQuery.exec("CREATE TABLE IF NOT EXISTS jobs ("
-                               "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                               "job_title TEXT,"
-                               "company TEXT,"
-                               "status TEXT,"
-                               "application_date TEXT,"
-                               "url_email TEXT,"
-                               "details TEXT"
-                               ");")) {
-        outputStr += "Error: " + createTableQuery.lastError().text();
-        QMessageBox::critical(parent, "Error", outputStr);
-        exportDb.close();
-        return;
-    }
-    QSqlQuery insertQuery(exportDb);
-    for (int row = 0; row < model->rowCount(); ++row) {
-        QSqlRecord record = model->record(row);
-        insertQuery.prepare("INSERT INTO jobs (job_title, company, status, application_date, url_email, details) "
-                            "VALUES (:job_title, :company, :status, :application_date, :url_email, :details)");
-        insertQuery.bindValue(":job_title", record.value("job_title"));
-        insertQuery.bindValue(":company", record.value("company"));
-        insertQuery.bindValue(":status", record.value("status"));
-        insertQuery.bindValue(":application_date", record.value("application_date"));
-        insertQuery.bindValue(":url_email", record.value("url_email"));
-        insertQuery.bindValue(":details", record.value("details"));
-        if (!insertQuery.exec()) {
-            outputStr += "Error: " + insertQuery.lastError().text();
-            QMessageBox::critical(parent, "Error", outputStr);
-            exportDb.close();
+    QFile file(fileName);
+    if (file.exists()) {
+        if (!file.remove()) {
+            QMessageBox::critical(parent, "Error", "Error: Failed to remove existing file.");
             return;
         }
     }
-    outputStr += "Exported DB successfully to " + fileName;
-    QMessageBox::information(parent, "Success", outputStr);
+    QSqlDatabase exportDb = QSqlDatabase::addDatabase("QSQLITE", "export");
+    exportDb.setDatabaseName(fileName);
+    if (!exportDb.open()) {
+        QMessageBox::critical(parent, "Error", "Error: " + exportDb.lastError().text());
+        return;
+    }
+    {
+        QSqlQuery createTableQuery(exportDb);
+        if (!createTableQuery.exec("CREATE TABLE IF NOT EXISTS jobs ("
+                                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                                   "job_title TEXT,"
+                                   "company TEXT,"
+                                   "status TEXT,"
+                                   "application_date TEXT,"
+                                   "url_email TEXT,"
+                                   "details TEXT,"
+                                   "is_finished BOOLEAN DEFAULT 0"
+                                   ");")) {
+            QMessageBox::critical(parent, "Error", "Error: " + createTableQuery.lastError().text());
+            exportDb.close();
+            return;
+        }
+        QSqlQuery insertQuery(exportDb);
+        for (int row = 0; row < model->rowCount(); ++row) {
+            QSqlRecord record = model->record(row);
+            insertQuery.prepare("INSERT INTO jobs (job_title, company, status, application_date, url_email, details, is_finished) "
+                                "VALUES (:job_title, :company, :status, :application_date, :url_email, :details, :is_finished)");
+            insertQuery.bindValue(":job_title", record.value("job_title"));
+            insertQuery.bindValue(":company", record.value("company"));
+            insertQuery.bindValue(":status", record.value("status"));
+            insertQuery.bindValue(":application_date", record.value("application_date"));
+            insertQuery.bindValue(":url_email", record.value("url_email"));
+            insertQuery.bindValue(":details", record.value("details"));
+            insertQuery.bindValue(":is_finished", record.value("is_finished"));
+            if (!insertQuery.exec()) {
+                QMessageBox::critical(parent, "Error", "Error: " + insertQuery.lastError().text());
+                exportDb.close();
+                return;
+            }
+        }
+    }
+    QMessageBox::information(parent, "Success", "Exported DB successfully to " + fileName);
     exportDb.close();
 }
 
+void DatabaseManager::exportToCSV() {
+    if (!model) {
+        QMessageBox::critical(parent, "Error", "Error: No model to export.");
+        return;
+    }
+    QString outputPath = QFileDialog::getSaveFileName(parent, "Save File", "output.csv", "CSV Files (*.csv)");
+    if (outputPath.isEmpty()) {
+        return;
+    }
+    QFile file(outputPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(parent, "Error", "IO Error: " + file.errorString());
+        return;
+    }
+    QTextStream out(&file);
+    int colCount = model->columnCount();
+    int rowCount = model->rowCount();
+    for (int col = 0; col < colCount; ++col) {
+        out << "\"" << model->headerData(col, Qt::Horizontal).toString() << "\"";
+        if (col < colCount - 1)
+            out << ",";
+    }
+    out << "\n";
+    for (int row = 0; row < rowCount; ++row) {
+        for (int col = 0; col < colCount; ++col) {
+            QString value = model->data(model->index(row, col)).toString();
+            if (value.contains(',')) {
+                value = "\"" + value + "\"";
+            }
+            out << value;
+            if (col < colCount - 1)
+                out << ",";
+        }
+        out << "\n";
+    }
+    QMessageBox::information(parent, "Success", "Successfully exported as CSV to " + outputPath);
+    file.close();
+}
 
 QSqlQueryModel* DatabaseManager::getModel() const {
     return model;

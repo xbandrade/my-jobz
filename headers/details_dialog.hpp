@@ -1,5 +1,5 @@
-#ifndef DETAILS_DIALOG_H
-#define DETAILS_DIALOG_H
+#ifndef DETAILS_DIALOG_HPP
+#define DETAILS_DIALOG_HPP
 
 #include <QDialog>
 #include <QLabel>
@@ -35,4 +35,4 @@ private:
     Ui::DetailsDialog *ui;
 };
 
-#endif // DETAILS_DIALOG_H
+#endif // DETAILS_DIALOG_HPP

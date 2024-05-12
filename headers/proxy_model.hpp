@@ -1,10 +1,9 @@
 #ifndef PROXY_MODEL_HPP
 #define PROXY_MODEL_HPP
 
-#include <QSortFilterProxyModel>
 #include <QDate>
 #include <QRegularExpression>
-
+#include <QSortFilterProxyModel>
 
 class SortProxyModel : public QSortFilterProxyModel {
 public:
