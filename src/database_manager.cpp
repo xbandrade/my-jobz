@@ -23,7 +23,6 @@ bool DatabaseManager::openDatabase(const QString& filePath) {
     if (ok) {
         QString backupFilePath = filePath + ".bak";
         createDatabaseBackup(backupFilePath);
-        loadModel();
     }
     return ok;
 }
@@ -31,7 +30,7 @@ bool DatabaseManager::openDatabase(const QString& filePath) {
 void DatabaseManager::loadModel() {
     model->setQuery("SELECT * FROM jobs");
     if (model->lastError().isValid()) {
-        QMessageBox::critical(parent, "Error", "Error: " +  model->lastError().text());
+        QMessageBox::critical(parent, "Error", "Error: " + model->lastError().text());
     }
 }
 

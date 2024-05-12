@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
             return;
         }
         model = dbManager->getModel();
-        model->setQuery("SELECT * FROM jobs");
+        dbManager->loadModel();
         sortProxyModel = new SortProxyModel(this);
         sortProxyModel->setSourceModel(model);
         setupTableView();
@@ -89,9 +89,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         QMessageBox aboutBox;
         aboutBox.setWindowTitle("About MyJobz");
         aboutBox.setTextFormat(Qt::RichText);
-        aboutBox.setText("<center>Manage your job applications with <b>MyJobz</b><br>"
-                         "Visit the <a href=\"https://www.example.com\">github repository</a> "
-                         "for the documentation<br>and more information<br>v0.0.1</center>");
+        aboutBox.setText("<div style='display: flex; align-items: center; justify-content: center; text-align: center;'>"
+                         "<div style='margin-right: 10px;'><img src=':/application.png' height='96'></div>"
+                         "<div style='display: flex; align-items: center; justify-content: center;'>"
+                         "<b style='margin-right: 5px; font-size: 24px;'>MyJobz 0.0.1</b></div>"
+                         "<div>Manage your job applications with <b>MyJobz</b><br>"
+                         "Visit the <a href='https://github.com/xbandrade/my-jobz/'>GitHub repository</a> "
+                         "for the documentation<br>and more information</div>"
+                         "</div>");
+
         aboutBox.exec();
     });
 }
@@ -233,6 +239,7 @@ void MainWindow::onImportFromDBTriggered() {
         QMessageBox::critical(this, "Error", "Failed to open database.");
         return;
     }
+    dbManager->loadModel();
     setupTableView();
     QMessageBox::information(this, "Success", "Database loaded successfully.");
 }
