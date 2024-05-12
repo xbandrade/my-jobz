@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <QMainWindow>
+#include <QInputDialog>
 #include <QStandardItemModel>
 #include <QTableView>
 #include <QCloseEvent>
@@ -79,6 +80,7 @@ private:
     bool showClipboardHint;
     void clearDialogFields();
     void markAsFinished();
+    void setupTableView();
 };
 
 #endif // MAIN_WINDOW_HPP

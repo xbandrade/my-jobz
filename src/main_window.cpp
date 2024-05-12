@@ -53,30 +53,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         model->setQuery("SELECT * FROM jobs");
         sortProxyModel = new SortProxyModel(this);
         sortProxyModel->setSourceModel(model);
-        tableView->setModel(sortProxyModel);
-        QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
-        for (int col = 0; col < headers.length(); ++col) {
-            model->setHeaderData(col, Qt::Horizontal, headers[col]);
-        }
-        tableView->horizontalHeader()->setStyleSheet(
-            "QHeaderView::section { background-color: #495057; padding-top: 2px; padding-bottom: 2px; "
-            "font-family: Nunito; font-size: 16px; color: #CED4DA; }"
-        );
-        tableView->setColumnHidden(7, true);
-        tableView->resizeColumnToContents(0);
-        tableView->setContextMenuPolicy(Qt::CustomContextMenu);
-        tableView->verticalHeader()->setVisible(false);
-        tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-        tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
-        tableView->setSortingEnabled(true);
-        tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        tableView->model()->sort(0, Qt::DescendingOrder);
-        ui->prevPageButton->setEnabled(false);
-        if (sortProxyModel->pageCount() <= 1) {
-            ui->nextPageButton->setEnabled(false);
-        }
+        setupTableView();
     }
     // Signal/Slot connections
     connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
@@ -119,6 +96,33 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     });
 }
 
+void MainWindow::setupTableView() {
+    tableView->setModel(sortProxyModel);
+    static QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
+    for (int col = 0; col < headers.length(); ++col) {
+        model->setHeaderData(col, Qt::Horizontal, headers[col]);
+    }
+    tableView->horizontalHeader()->setStyleSheet(
+        "QHeaderView::section { background-color: #495057; padding-top: 2px; padding-bottom: 2px; "
+        "font-family: Nunito; font-size: 16px; color: #CED4DA; }"
+        );
+    tableView->setColumnHidden(7, true);
+    tableView->resizeColumnToContents(0);
+    tableView->setContextMenuPolicy(Qt::CustomContextMenu);
+    tableView->verticalHeader()->setVisible(false);
+    tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+    tableView->setSortingEnabled(true);
+    tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    tableView->model()->sort(4, Qt::DescendingOrder);
+    ui->prevPageButton->setEnabled(false);
+    if (sortProxyModel->pageCount() <= 1) {
+        ui->nextPageButton->setEnabled(false);
+    }
+}
+
 void MainWindow::onTableCellDoubleClicked(const QModelIndex &index) {
     QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
     QModelIndex idIndex = model->index(sourceIndex.row(), 0);
@@ -146,12 +150,24 @@ void MainWindow::onTableCellDoubleClicked(const QModelIndex &index) {
 void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     QModelIndex index = tableView->indexAt(pos);
     if (index.isValid()) {
+        QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+        bool isFinished = model->data(model->index(sourceIndex.row(), 7)).toBool();
         QMenu contextMenu(tr("Context Menu"), this);
-        QAction *markAsFinishedAction = new QAction(tr("Mark as Finished"), this);
-        connect(markAsFinishedAction, &QAction::triggered, this, [this, index]() {
-            QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
+        QAction *markAsFinishedAction = new QAction(
+            isFinished ? tr("Unmark as Finished") : tr("Mark as Finished"), this);
+        connect(markAsFinishedAction, &QAction::triggered, this, [this, sourceIndex, isFinished]() {
             int id = model->data(model->index(sourceIndex.row(), 0)).toInt();
-            dbManager->updateStatus(id, "Finished");
+            QString newStatus = isFinished ? "" : "Finished";
+            if (newStatus.isEmpty()) {
+                bool ok;
+                QString status = QInputDialog::getText(
+                    this, tr("New Status"), tr("Enter new status:"), QLineEdit::Normal, "", &ok);
+                if (!ok || status.isEmpty()) {
+                    return;
+                }
+                newStatus = status;
+            }
+            dbManager->updateStatus(id, newStatus);
         });
         contextMenu.addAction(markAsFinishedAction);
         QAction *goToUrlEmailAction = new QAction(tr("Go To URL/Email"), this);
@@ -164,7 +180,6 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
                 ((data.startsWith("http://") || data.startsWith("https://")) ? "" : mailSearchUrl) + data));
         });
         contextMenu.addAction(goToUrlEmailAction);
-        QModelIndex sourceIndex = sortProxyModel->mapToSource(index);
         QString data = model->data(model->index(sourceIndex.row(), 5)).toString();
         if (data.startsWith("http://") || data.startsWith("https://") || data.contains("@")) {
             goToUrlEmailAction->setEnabled(true);
@@ -218,7 +233,7 @@ void MainWindow::onImportFromDBTriggered() {
         QMessageBox::critical(this, "Error", "Failed to open database.");
         return;
     }
-    tableView->setModel(sortProxyModel);
+    setupTableView();
     QMessageBox::information(this, "Success", "Database loaded successfully.");
 }
 
