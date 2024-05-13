@@ -12,16 +12,20 @@ DetailsDialog::DetailsDialog(QWidget *parent) : QDialog(parent), ui(new Ui::Deta
     statusLineEdit = ui->statusLineEdit;
     detailsTextEdit = ui->detailsTextEdit;
     detailsSubmitButton = ui->detailsSubmitButton;
-    installEventFilter(this);
+    connect(detailsSubmitButton, &QPushButton::clicked, this, &DetailsDialog::onSubmitButtonClicked);
+    connect(this, &QDialog::finished, this, &DetailsDialog::onDialogFinished);
 }
 
-bool DetailsDialog::eventFilter(QObject *obj, QEvent *event)
-{
-    if (obj == this && event->type() == QEvent::MouseButtonPress) {
+void DetailsDialog::onSubmitButtonClicked() {
+    setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
+    show();
+}
+
+void DetailsDialog::onDialogFinished(int result) {
+    if (result == QDialog::Accepted) {
         setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
         show();
     }
-    return QDialog::eventFilter(obj, event);
 }
 
 DetailsDialog::~DetailsDialog() {

@@ -6,7 +6,10 @@ SortProxyModel::SortProxyModel(QObject *parent) : QSortFilterProxyModel(parent),
 bool SortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right) const {
     QVariant leftData = sourceModel()->data(left);
     QVariant rightData = sourceModel()->data(right);
+
     if (leftData.typeId() == QVariant::String && rightData.typeId() == QVariant::String) {
+        return QString::localeAwareCompare(leftData.toString(), rightData.toString()) < 0;
+    } else if (leftData.typeId() == QVariant::String && rightData.typeId() == QVariant::String) {
         QDate leftDate = QDate::fromString(leftData.toString(), "dd/MM/yyyy");
         QDate rightDate = QDate::fromString(rightData.toString(), "dd/MM/yyyy");
         if (leftDate.isValid() && rightDate.isValid()) {
@@ -17,14 +20,16 @@ bool SortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right)
 }
 
 bool SortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
-    int totalRows = sourceModel()->rowCount();
-    int start = totalRows - currentPage * itemsPerPage;
-    int end = start + itemsPerPage;
     if (hideFinishedCheckBox && sourceModel()->data(sourceModel()->index(sourceRow, 7, sourceParent)).toBool()) {
         return false;
     }
     if (filterRegularExpression().pattern().isEmpty()) {
-        return sourceRow >= start && sourceRow < end;
+        int totalRows = sourceModel()->rowCount();
+        int start = totalRows - (currentPage * itemsPerPage);
+        int end = start + itemsPerPage - 1;
+        start = qMax(start, 0);
+        end = qMin(end, totalRows - 1);
+        return sourceRow >= start && sourceRow <= end;
     }
     QString searchString = filterRegularExpression().pattern();
     QRegularExpression regex(searchString, QRegularExpression::CaseInsensitiveOption);
@@ -40,7 +45,6 @@ bool SortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourcePa
 void SortProxyModel::setHideFinished(bool hide) {
     if (hide == hideFinishedCheckBox)
         return;
-
     hideFinishedCheckBox = hide;
     invalidate();
 }
@@ -54,6 +58,10 @@ void SortProxyModel::setCurrentPage(int page) {
 
 int SortProxyModel::getCurrentPage() {
     return currentPage;
+}
+
+int SortProxyModel::getItemsPerPage() {
+    return itemsPerPage;
 }
 
 void SortProxyModel::setItemsPerPage(int items) {

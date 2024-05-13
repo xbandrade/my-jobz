@@ -40,18 +40,22 @@
 }
 
 QPushButton {
-	background-color: #CED4DA ;
+	background-color: #c4d4e4 ;
 	border-radius: 10px;
  	padding: 7px 10px; 
 	border: 1px solid #74A2C9;
 }
 
 QPushButton:hover {
-    background-color: #ADB5BD; 
+    background-color: #a2bad4; 
 }
 
 QPushButton:pressed {
-    background-color: #6C757D; 
+    background-color: #7fa0c4; 
+}
+
+QPushButton:disabled {
+    background-color: #d9d9d9;
 }
 
 QCheckBox {
@@ -425,6 +429,28 @@ QScrollBar::sub-line:vertical {
          </spacer>
         </item>
         <item>
+         <widget class="QPushButton" name="firstPageButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Nunito</family>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;&lt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="prevPageButton">
           <property name="enabled">
            <bool>false</bool>
@@ -447,7 +473,7 @@ QScrollBar::sub-line:vertical {
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="pageLabel">
+         <widget class="QLabel" name="currPageLabel">
           <property name="minimumSize">
            <size>
             <width>80</width>
@@ -461,7 +487,7 @@ QScrollBar::sub-line:vertical {
            </font>
           </property>
           <property name="text">
-           <string>1</string>
+           <string>1 of 1</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -484,6 +510,25 @@ QScrollBar::sub-line:vertical {
           </property>
           <property name="text">
            <string>&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="lastPageButton">
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Nunito</family>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>&gt;&gt;</string>
           </property>
          </widget>
         </item>
@@ -618,6 +663,7 @@ QMenuBar::item:selected:disabled {
     <addaction name="menuLanguage"/>
     <addaction name="menuSetInitialDate"/>
     <addaction name="menuSetInitialStatus"/>
+    <addaction name="actionAutoBackup"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -755,6 +801,17 @@ QMenuBar::item:selected:disabled {
   <action name="actionImportFromCSV">
    <property name="text">
     <string>Import from CSV</string>
+   </property>
+  </action>
+  <action name="actionAutoBackup">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable Auto Backup</string>
    </property>
   </action>
  </widget>

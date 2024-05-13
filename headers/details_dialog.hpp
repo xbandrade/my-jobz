@@ -28,8 +28,9 @@ public:
     QPushButton *detailsSubmitButton;
     ~DetailsDialog();
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event);
+private slots:
+    void onSubmitButtonClicked();
+    void onDialogFinished(int result);
 
 private:
     Ui::DetailsDialog *ui;

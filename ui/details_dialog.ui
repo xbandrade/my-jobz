@@ -43,18 +43,18 @@ QDialog {
 }
 
 QPushButton {
-	background-color: #CED4DA ;
+	background-color: #c4d4e4 ;
 	border-radius: 10px;
  	padding: 5px 10px; 
 	border: 1px solid #74A2C9;
 }
 
 QPushButton:hover {
-    background-color: #ADB5BD; 
+    background-color: #a2bad4; 
 }
 
 QPushButton:pressed {
-    background-color: #6C757D; 
+    background-color: #7fa0c4; 
 }
 
 QCheckBox {

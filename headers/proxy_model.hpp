@@ -8,8 +8,9 @@
 class SortProxyModel : public QSortFilterProxyModel {
 public:
     SortProxyModel(QObject *parent = nullptr);
-    void setCurrentPage(int page);
     int getCurrentPage();
+    void setCurrentPage(int page);
+    int getItemsPerPage();
     void setItemsPerPage(int items);
     int pageCount() const;
     void setHideFinished(bool hide);

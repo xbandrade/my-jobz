@@ -9,6 +9,7 @@ void DatabaseManager::createDatabaseBackup(const QString& backupFilePath) {
     if (db.isOpen()) {
         db.close();
     }
+    QFile::remove(backupFilePath);
     QFile::copy(db.databaseName(), backupFilePath);
     if (!db.open()) {
         QMessageBox::critical(parent, "Error", "Failed to reopen database after creating backup");
@@ -16,13 +17,12 @@ void DatabaseManager::createDatabaseBackup(const QString& backupFilePath) {
     }
 }
 
-bool DatabaseManager::openDatabase(const QString& filePath) {
+bool DatabaseManager::openDatabase(const QString& filePath, bool autoBackup) {
     db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(filePath);
     bool ok = db.open();
-    if (ok) {
-        QString backupFilePath = filePath + ".bak";
-        createDatabaseBackup(backupFilePath);
+    if (ok && autoBackup) {
+        createDatabaseBackup(filePath + ".bak");
     }
     return ok;
 }

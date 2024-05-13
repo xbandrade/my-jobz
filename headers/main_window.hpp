@@ -2,6 +2,9 @@
 #define MAIN_WINDOW_HPP
 
 #include <stdexcept>
+#include <limits>
+#include <algorithm>
+#include <QApplication>
 #include <QMainWindow>
 #include <QInputDialog>
 #include <QStandardItemModel>
@@ -21,6 +24,7 @@
 #include <QSqlRecord>
 #include <QObject>
 #include <QFile>
+#include <QSettings>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QClipboard>
@@ -44,6 +48,9 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    void changeEvent(QEvent *event);
+
 private slots:
     void restoreWindow();
     void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
@@ -58,14 +65,14 @@ private slots:
     void onTrayMessageClicked();
     void onPrevPageButtonClicked();
     void onNextPageButtonClicked();
+    void onFirstPageButtonClicked();
+    void onLastPageButtonClicked();
     void onItemsPerPageChanged();
     void onExportToCSVTriggered();
     void onExportToDBTriggered();
     void onImportFromDBTriggered();
     void onCustomContextMenuRequested(const QPoint &pos);
-
-protected:
-    void changeEvent(QEvent *event);
+    void saveUserPreferences();
 
 private:
     Ui::mainWindow *ui;
@@ -76,11 +83,14 @@ private:
     QSystemTrayIcon *trayIcon;
     SortProxyModel *sortProxyModel;
     QString previousClipboard;
-    DatabaseManager* dbManager;
+    DatabaseManager *dbManager;
+    QSettings *settings;
     bool showClipboardHint;
     void clearDialogFields();
     void markAsFinished();
     void setupTableView();
+    void updatePagination();
+    void loadUserPreferences();
 };
 
 #endif // MAIN_WINDOW_HPP

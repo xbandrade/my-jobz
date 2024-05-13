@@ -20,7 +20,7 @@ class DatabaseManager {
 public:
     DatabaseManager(QWidget* parent = nullptr);
     ~DatabaseManager();
-    bool openDatabase(const QString& filePath);
+    bool openDatabase(const QString& filePath, bool autoBackup);
     void loadModel();
     void closeDatabase();
     bool createJobsTableIfNotExists();

@@ -3,6 +3,7 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWindow) {
     showClipboardHint = true;
+    settings = new QSettings("MyJobz", "MyJobz");
     trayIcon = new QSystemTrayIcon(this);
     QIcon icon(":/application.png");
     trayIcon->setIcon(icon);
@@ -19,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     if (layout) {
         layout->setAlignment(Qt::AlignCenter);
     }
-    detailsDialog = new DetailsDialog(this);
+    detailsDialog = new DetailsDialog();
     QActionGroup *itemsPerPageGroup = new QActionGroup(this);
     itemsPerPageGroup->setExclusive(true);
     itemsPerPageGroup->addAction(ui->action10Items);
@@ -41,7 +42,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     tableView = findChild<QTableView*>("tableView");
     if (tableView) {
         dbManager = new DatabaseManager(this);
-        if (!dbManager->openDatabase("database.db")) {
+        if (!dbManager->openDatabase("database.db", ui->actionAutoBackup->isChecked())) {
             QMessageBox::critical(parent, "Error", "IO Error");
             return;
         }
@@ -55,6 +56,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         sortProxyModel->setSourceModel(model);
         setupTableView();
     }
+    loadUserPreferences();
     // Signal/Slot connections
     connect(tableView, &QTableView::doubleClicked, this, &MainWindow::onTableCellDoubleClicked);
     connect(tableView, &QTableView::customContextMenuRequested, this, &MainWindow::onCustomContextMenuRequested);
@@ -66,6 +68,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     connect(ui->clipboardCheckBox, &QCheckBox::clicked, this, &MainWindow::onClipboardCheckBoxClicked);
     connect(ui->prevPageButton, &QCheckBox::clicked, this, &MainWindow::onPrevPageButtonClicked);
     connect(ui->nextPageButton, &QCheckBox::clicked, this, &MainWindow::onNextPageButtonClicked);
+    connect(ui->firstPageButton, &QCheckBox::clicked, this, &MainWindow::onFirstPageButtonClicked);
+    connect(ui->lastPageButton, &QCheckBox::clicked, this, &MainWindow::onLastPageButtonClicked);
     connect(detailsDialog->detailsSubmitButton, &QPushButton::clicked, this, &MainWindow::onDetailsSubmitButtonClicked);
     connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onTrayIconActivated);
     connect(restoreAction, &QAction::triggered, this, &MainWindow::restoreWindow);
@@ -79,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     connect(ui->action15Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action20Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
     connect(ui->action40Items, &QAction::triggered, this, &MainWindow::onItemsPerPageChanged);
+    connect(qApp, &QApplication::aboutToQuit, this, &MainWindow::saveUserPreferences);
     connect(ui->hideFinishedCheckBox, &QCheckBox::stateChanged, this, [=](int state){
         sortProxyModel->setHideFinished(state == Qt::Checked);
     });
@@ -102,6 +107,46 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
     });
 }
 
+void MainWindow::loadUserPreferences() {
+    ui->actionAutoBackup->setChecked(settings->value("autoBackup", true).toBool());
+    ui->actionApplied->setChecked(settings->value("defaultStatus", true).toBool());
+    ui->actionBlankStatus->setChecked(!ui->actionApplied->isChecked());
+    ui->actionToday->setChecked(settings->value("defaultDate", true).toBool());
+    ui->actionBlankDate->setChecked(!ui->actionToday->isChecked());
+    ui->trayCheckBox->setChecked(settings->value("minimizeToTray", true).toBool());
+    ui->clipboardCheckBox->setChecked(settings->value("clipboardMonitor", false).toBool());
+    ui->hideFinishedCheckBox->setChecked(settings->value("hideFinished", false).toBool());
+    ui->action10Items->setChecked(true);
+    int itemsPerPage = settings->value("itemsPerPage", 10).toInt();
+    QActionGroup *itemsPerPageGroup = ui->action10Items->actionGroup();
+    for (auto *action : itemsPerPageGroup->actions()) {
+        if (action->data().toInt() == itemsPerPage) {
+            action->setChecked(true);
+            sortProxyModel->setItemsPerPage(itemsPerPage);
+            onItemsPerPageChanged();
+            break;
+        }
+    }
+}
+
+void MainWindow::saveUserPreferences() {
+    settings->setValue("autoBackup", ui->actionAutoBackup->isChecked());
+    settings->setValue("defaultStatus", ui->actionApplied->isChecked());
+    settings->setValue("defaultDate", ui->actionToday->isChecked());
+    settings->setValue("minimizeToTray", ui->trayCheckBox->isChecked());
+    settings->setValue("clipboardMonitor", ui->clipboardCheckBox->isChecked());
+    settings->setValue("hideFinished", ui->hideFinishedCheckBox->isChecked());
+    int itemsPerPage = 10;
+    QActionGroup *itemsPerPageGroup = ui->action10Items->actionGroup();
+    for (auto *action : itemsPerPageGroup->actions()) {
+        if (action->isChecked()) {
+            itemsPerPage = action->data().toInt();
+            break;
+        }
+    }
+    settings->setValue("itemsPerPage", itemsPerPage);
+}
+
 void MainWindow::setupTableView() {
     tableView->setModel(sortProxyModel);
     static QStringList headers = {"ID", "Job Title", "Company", "Status", "Application Date", "URL/Email", "Details"};
@@ -122,11 +167,9 @@ void MainWindow::setupTableView() {
     tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
     tableView->setSortingEnabled(true);
     tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    tableView->model()->sort(4, Qt::DescendingOrder);
-    ui->prevPageButton->setEnabled(false);
-    if (sortProxyModel->pageCount() <= 1) {
-        ui->nextPageButton->setEnabled(false);
-    }
+    tableView->model()->sort(0, Qt::DescendingOrder);
+    sortProxyModel->setCurrentPage(1);
+    updatePagination();
 }
 
 void MainWindow::onTableCellDoubleClicked(const QModelIndex &index) {
@@ -200,10 +243,19 @@ void MainWindow::onItemsPerPageChanged() {
         int itemsPerPage = action->data().toInt();
         sortProxyModel->setItemsPerPage(itemsPerPage);
         sortProxyModel->setCurrentPage(1);
-        ui->pageLabel->setText(QString("1"));
-        ui->prevPageButton->setEnabled(false);
-        ui->nextPageButton->setEnabled(sortProxyModel->pageCount() > 1);
+        updatePagination();
     }
+}
+
+void MainWindow::updatePagination() {
+    int currentPage = sortProxyModel->getCurrentPage();
+    int totalPages = sortProxyModel->pageCount();
+    QString labelText = QString("<span style='background-color: #8d959d;'>%1</span> of %2").arg(currentPage).arg(totalPages);
+    ui->currPageLabel->setText(labelText);
+    ui->prevPageButton->setEnabled(currentPage > 1);
+    ui->firstPageButton->setEnabled(currentPage > 1);
+    ui->nextPageButton->setEnabled(currentPage < totalPages);
+    ui->lastPageButton->setEnabled(currentPage < totalPages);
 }
 
 void MainWindow::onExportToCSVTriggered() {
@@ -235,7 +287,7 @@ void MainWindow::onImportFromDBTriggered() {
     }
     tableView->setModel(nullptr);
     dbManager->closeDatabase();
-    if (!dbManager->openDatabase(filePath)) {
+    if (!dbManager->openDatabase(filePath, ui->actionAutoBackup->isChecked())) {
         QMessageBox::critical(this, "Error", "Failed to open database.");
         return;
     }
@@ -259,20 +311,23 @@ void MainWindow::onAddNewItemButtonClicked() {
     detailsDialog->exec();
 }
 
+void MainWindow::onFirstPageButtonClicked() {
+    sortProxyModel->setCurrentPage(1);
+    updatePagination();
+}
+
+void MainWindow::onLastPageButtonClicked() {
+    sortProxyModel->setCurrentPage(sortProxyModel->pageCount());
+    updatePagination();
+}
+
 void MainWindow::onPrevPageButtonClicked() {
     int currentPage = sortProxyModel->getCurrentPage();
     if (currentPage <= 1) {
         return;
     }
     sortProxyModel->setCurrentPage(currentPage - 1);
-    int newPage = sortProxyModel->getCurrentPage();
-    if (newPage < currentPage) {
-        ui->pageLabel->setText(QString::number(newPage));
-        ui->nextPageButton->setEnabled(true);
-        if (newPage == 1) {
-            ui->prevPageButton->setEnabled(false);
-        }
-    }
+    updatePagination();
 }
 
 void MainWindow::onNextPageButtonClicked() {
@@ -281,14 +336,7 @@ void MainWindow::onNextPageButtonClicked() {
         return;
     }
     sortProxyModel->setCurrentPage(currentPage + 1);
-    int newPage = sortProxyModel->getCurrentPage();
-    if (newPage > currentPage) {
-        ui->pageLabel->setText(QString::number(newPage));
-        ui->prevPageButton->setEnabled(true);
-        if (newPage == sortProxyModel->pageCount()) {
-            ui->nextPageButton->setEnabled(false);
-        }
-    }
+    updatePagination();
 }
 
 void MainWindow::onDeleteButtonClicked() {
@@ -318,7 +366,8 @@ void MainWindow::onDeleteButtonClicked() {
         }
     }
     model->setQuery("SELECT * FROM jobs");
-    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
+    sortProxyModel->setCurrentPage(std::min(sortProxyModel->getCurrentPage(), sortProxyModel->pageCount()));
+    updatePagination();
     QMessageBox::information(this, "Success", "The appointment has been deleted successfully.");
 }
 
@@ -348,7 +397,7 @@ void MainWindow::onDuplicateButtonClicked() {
         }
     }
     model->setQuery("SELECT * FROM jobs");
-    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
+    updatePagination();
     QMessageBox::information(this, "Success", "The appointment has been duplicated successfully.");
 }
 
@@ -356,6 +405,7 @@ void MainWindow::onSearchButtonClicked() {
     QString searchString = ui->searchLineEdit->text();
     QRegularExpression regex(searchString, QRegularExpression::CaseInsensitiveOption);
     sortProxyModel->setFilterRegularExpression(regex);
+    updatePagination();
 }
 
 void MainWindow::onDetailsSubmitButtonClicked() {
@@ -388,7 +438,7 @@ void MainWindow::onDetailsSubmitButtonClicked() {
     model->setQuery("SELECT * FROM jobs");
     QMessageBox::information(detailsDialog, "Success",
         QString("Appointment ") + (isNewEntry ? "added" : "updated") + " successfully");
-    ui->nextPageButton->setEnabled(sortProxyModel->getCurrentPage() < sortProxyModel->pageCount());
+    updatePagination();
     detailsDialog->close();
 }
 
