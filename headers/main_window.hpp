@@ -34,6 +34,7 @@
 #include "details_dialog.hpp"
 #include "proxy_model.hpp"
 #include "database_manager.hpp"
+#include "custom_textedit.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

@@ -97,7 +97,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::mainWi
         aboutBox.setText("<div style='display: flex; align-items: center; justify-content: center; text-align: center;'>"
                          "<div style='margin-right: 10px;'><img src=':/application.png' height='96'></div>"
                          "<div style='display: flex; align-items: center; justify-content: center;'>"
-                         "<b style='margin-right: 5px; font-size: 24px;'>MyJobz v0.0.2</b></div>"
+                         "<b style='margin-right: 5px; font-size: 24px;'>MyJobz v0.0.3</b></div>"
                          "<div>Manage your job applications with <b>MyJobz</b><br>"
                          "Visit the <a href='https://github.com/xbandrade/my-jobz/'>GitHub repository</a> "
                          "for the documentation<br>and more information</div>"

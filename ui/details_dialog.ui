@@ -299,7 +299,7 @@ QCheckBox {
       </widget>
      </item>
      <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
-      <widget class="QTextEdit" name="detailsTextEdit">
+      <widget class="CustomTextEdit" name="detailsTextEdit">
        <property name="minimumSize">
         <size>
          <width>450</width>
@@ -340,6 +340,13 @@ QCheckBox {
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header location="global">headers/custom_textedit.hpp</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../resources/resources.qrc"/>
  </resources>

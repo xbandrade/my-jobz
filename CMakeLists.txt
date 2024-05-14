@@ -35,11 +35,12 @@ set(RESOURCES
 )
 
 set(PROJECT_SOURCES
-        main.cpp
+        src/main.cpp
         src/main_window.cpp
         src/details_dialog.cpp
         src/proxy_model.cpp
         src/database_manager.cpp
+        src/custom_textedit.cpp
 )
 
 set(PROJECT_HEADERS
@@ -47,6 +48,7 @@ set(PROJECT_HEADERS
         headers/details_dialog.hpp
         headers/proxy_model.hpp
         headers/database_manager.hpp
+        headers/custom_textedit.hpp
 )
 
 set(PROJECT_FORMS
@@ -56,11 +58,11 @@ set(PROJECT_FORMS
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(my-jobz
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        ${PROJECT_HEADERS}
-        ${PROJECT_FORMS}
-        ${RESOURCES}
+            MANUAL_FINALIZATION
+            ${PROJECT_SOURCES}
+            ${PROJECT_HEADERS}
+            ${PROJECT_FORMS}
+            ${RESOURCES}
     )
 else()
     if(ANDROID)
